@@ -1,20 +1,18 @@
 import express from 'express';
 import axios from 'axios';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 const app = express();
+app.use(express.json());
 
 const CLIENT_ID = process.env.WHOOP_CLIENT_ID;
 const CLIENT_SECRET = process.env.WHOOP_CLIENT_SECRET;
 const REDIRECT_URI = process.env.REDIRECT_URI;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const SCOPE = 'read:recovery read:sleep read:workout read:body_measurement read:profile offline';
 
-// Home page
 app.get('/', (req, res) => {
   res.send(`
-    <h1>WHOOP AI Health Insights</h1>
+    <h1>VitalMind - WHOOP AI Health Insights</h1>
     <a href="/login">Connect your WHOOP</a>
   `);
 });
@@ -30,13 +28,9 @@ app.get('/login', (req, res) => {
   res.redirect(url.toString());
 });
 
-// WHOOP sends user back here after login
 app.get('/callback', async (req, res) => {
   const { code } = req.query;
-
-  if (!code) {
-    return res.status(400).send('No code received from WHOOP');
-  }
+  if (!code) return res.status(400).send('No code received from WHOOP');
 
   try {
     const params = new URLSearchParams();
@@ -46,25 +40,76 @@ app.get('/callback', async (req, res) => {
     params.append('client_secret', CLIENT_SECRET);
     params.append('redirect_uri', REDIRECT_URI);
 
-    const response = await axios.post(
+    const tokenRes = await axios.post(
       'https://api.prod.whoop.com/oauth/oauth2/token',
       params,
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
 
-    const { access_token, refresh_token, expires_in } = response.data;
+    const { access_token } = tokenRes.data;
+
+    // Fetch WHOOP data
+    const headers = { Authorization: `Bearer ${access_token}` };
+    const [recovery, sleep, cycles] = await Promise.all([
+      axios.get('https://api.prod.whoop.com/developer/v1/recovery?limit=7', { headers }),
+      axios.get('https://api.prod.whoop.com/developer/v1/sleep?limit=7', { headers }),
+      axios.get('https://api.prod.whoop.com/developer/v1/cycle?limit=7', { headers }),
+    ]);
+
+    const whoopData = {
+      recovery: recovery.data.records,
+      sleep: sleep.data.records,
+      strain: cycles.data.records,
+    };
+
+    // Send to Claude
+    const claudeRes = await axios.post(
+      'https://api.anthropic.com/v1/messages',
+      {
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: `You are a personal health coach. Analyze this WHOOP data from the past 7 days and give clear, specific insights. Tell the user what patterns you see, what's going wrong, and 3 concrete actions they should take. Be direct and specific, not generic.
+
+WHOOP Data:
+${JSON.stringify(whoopData, null, 2)}`
+        }]
+      },
+      {
+        headers: {
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json'
+        }
+      }
+    );
+
+    const insight = claudeRes.data.content[0].text;
 
     res.send(`
-      <h2>✅ Connected Successfully!</h2>
-      <p><strong>Access Token:</strong><br/><code>${access_token}</code></p>
-      <p><strong>Refresh Token:</strong><br/><code>${refresh_token}</code></p>
-      <p><strong>Expires in:</strong> ${expires_in} seconds</p>
-      <p>⚠️ Copy and save both tokens somewhere safe.</p>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>VitalMind Insights</title>
+        <style>
+          body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+          h1 { color: #1a1a1a; }
+          .insight { background: #f5f5f5; padding: 20px; border-radius: 10px; line-height: 1.6; white-space: pre-wrap; }
+          .refresh { display: inline-block; margin-top: 20px; padding: 10px 20px; background: #000; color: #fff; text-decoration: none; border-radius: 5px; }
+        </style>
+      </head>
+      <body>
+        <h1>Your WHOOP AI Insights</h1>
+        <div class="insight">${insight}</div>
+        <a class="refresh" href="/login">Refresh Analysis</a>
+      </body>
+      </html>
     `);
 
   } catch (err) {
     console.error(err.response?.data || err.message);
-    res.status(500).send('Auth failed: ' + JSON.stringify(err.response?.data));
+    res.status(500).send('Error: ' + JSON.stringify(err.response?.data || err.message));
   }
 });
 
