@@ -19,22 +19,16 @@ app.get('/', (req, res) => {
   `);
 });
 
-// Start OAuth flow
 app.get('/login', (req, res) => {
+  const state = Math.random().toString(36).substring(2, 12);
   const url = new URL('https://api.prod.whoop.com/oauth/oauth2/auth');
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('client_id', CLIENT_ID);
   url.searchParams.set('redirect_uri', REDIRECT_URI);
   url.searchParams.set('scope', SCOPE);
-  
-  // Temporary debug - remove later
-  res.send(`
-    <p>CLIENT_ID: ${CLIENT_ID}</p>
-    <p>REDIRECT_URI: ${REDIRECT_URI}</p>
-    <p>Full URL: ${url.toString()}</p>
-    <a href="${url.toString()}">Click here to login</a>
-  `);
-});;
+  url.searchParams.set('state', state);
+  res.redirect(url.toString());
+});
 
 // WHOOP sends user back here after login
 app.get('/callback', async (req, res) => {
