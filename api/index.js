@@ -50,17 +50,17 @@ app.get('/callback', async (req, res) => {
     const { access_token } = tokenRes.data;
     const headers = { Authorization: `Bearer ${access_token}` };
 
-    // Step 2: Fetch sleep data
-    let sleep;
+    // Step 2: Test with profile endpoint first
+    let profile;
     try {
-      const s = await axios.get('https://api.prod.whoop.com/developer/v1/activity/sleep?limit=7', { headers });
-      sleep = s.data.records;
+      const p = await axios.get('https://api.prod.whoop.com/developer/v1/user/profile/basic', { headers });
+      profile = p.data;
     } catch(e) {
-      return res.status(500).send('Sleep failed: ' + e.response?.status + ' ' + JSON.stringify(e.response?.data));
+      return res.status(500).send('Profile failed: ' + e.response?.status + ' ' + JSON.stringify(e.response?.data));
     }
 
     // Step 3: Send to Claude
-    const whoopData = { sleep };
+    const whoopData = { profile };
     let claudeRes;
     try {
       claudeRes = await axios.post(
