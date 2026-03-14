@@ -50,45 +50,43 @@ app.get('/callback', async (req, res) => {
     const { access_token } = tokenRes.data;
     const headers = { Authorization: `Bearer ${access_token}` };
 
-    // Step 2: Test with profile endpoint first
-    let profile;
-    try {
-      const p = await axios.get('https://api.prod.whoop.com/developer/v1/user/profile/basic', { headers });
-      profile = p.data;
-    } catch(e) {
-      return res.status(500).send('Profile failed: ' + e.response?.status + ' ' + JSON.stringify(e.response?.data));
-    }
+    // Step 2: Fetch all health data
+    const [profileRes, recoveryRes, sleepRes] = await Promise.allSettled([
+      axios.get('https://api.prod.whoop.com/developer/v1/user/profile/basic', { headers }),
+      axios.get('https://api.prod.whoop.com/developer/v1/recovery?limit=7', { headers }),
+      axios.get('https://api.prod.whoop.com/developer/v1/sleep?limit=7', { headers }),
+    ]);
+
+    const whoopData = {
+      profile: profileRes.status === 'fulfilled' ? profileRes.value.data : null,
+      recovery: recoveryRes.status === 'fulfilled' ? recoveryRes.value.data.records : [],
+      sleep: sleepRes.status === 'fulfilled' ? sleepRes.value.data.records : [],
+    };
 
     // Step 3: Send to Claude
-    const whoopData = { profile };
-    let claudeRes;
-    try {
-      claudeRes = await axios.post(
-        'https://api.anthropic.com/v1/messages',
-        {
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{
-            role: 'user',
-            content: `You are a personal health coach. Analyze this WHOOP data from the past 7 days and give clear, specific insights. Tell the user what patterns you see, what is going wrong, and 3 concrete actions they should take. Be direct and specific, not generic.
+    const claudeRes = await axios.post(
+      'https://api.anthropic.com/v1/messages',
+      {
+        model: 'claude-opus-4-5',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: `You are a personal health coach. Analyze this WHOOP data from the past 7 days and give clear, specific insights. Tell the user what patterns you see, what is going wrong, and 3 concrete actions they should take. Be direct and specific, not generic.
 
 WHOOP Data:
 ${JSON.stringify(whoopData, null, 2)}`
-          }]
-        },
-        {
-          headers: {
-            'x-api-key': ANTHROPIC_API_KEY,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json'
-          }
+        }]
+      },
+      {
+        headers: {
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json'
         }
-      );
-    } catch(e) {
-      return res.status(500).send('Claude failed: ' + e.response?.status + ' ' + JSON.stringify(e.response?.data));
-    }
+      }
+    );
 
-    // Step 5: Show results
+    // Step 4: Show results
     const insight = claudeRes.data.content[0].text;
 
     res.send(`
@@ -112,7 +110,7 @@ ${JSON.stringify(whoopData, null, 2)}`
     `);
 
   } catch (err) {
-    res.status(500).send('Unexpected error: ' + JSON.stringify(err.message));
+    res.status(500).send('Error: ' + JSON.stringify(err.response?.data || err.message));
   }
 });
 
