@@ -54,7 +54,7 @@ app.get('/callback', async (req, res) => {
     const [profileRes, recoveryRes, sleepRes] = await Promise.allSettled([
       axios.get('https://api.prod.whoop.com/developer/v2/user/profile/basic', { headers }),
       axios.get('https://api.prod.whoop.com/developer/v2/recovery?limit=7', { headers }),
-      axios.get('https://api.prod.whoop.com/developer/v2/sleep?limit=7', { headers }),
+      axios.get('https://api.prod.whoop.com/developer/v2/activity/sleep?limit=7', { headers })
     ]);
 
     const whoopData = {
