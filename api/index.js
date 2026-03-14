@@ -26,8 +26,15 @@ app.get('/login', (req, res) => {
   url.searchParams.set('client_id', CLIENT_ID);
   url.searchParams.set('redirect_uri', REDIRECT_URI);
   url.searchParams.set('scope', SCOPE);
-  res.redirect(url.toString());
-});
+  
+  // Temporary debug - remove later
+  res.send(`
+    <p>CLIENT_ID: ${CLIENT_ID}</p>
+    <p>REDIRECT_URI: ${REDIRECT_URI}</p>
+    <p>Full URL: ${url.toString()}</p>
+    <a href="${url.toString()}">Click here to login</a>
+  `);
+});;
 
 // WHOOP sends user back here after login
 app.get('/callback', async (req, res) => {
