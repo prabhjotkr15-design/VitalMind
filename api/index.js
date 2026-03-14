@@ -50,16 +50,7 @@ app.get('/callback', async (req, res) => {
     const { access_token } = tokenRes.data;
     const headers = { Authorization: `Bearer ${access_token}` };
 
-    // Step 2: Fetch recovery data
-    let recovery;
-    try {
-      const r = await axios.get('https://api.prod.whoop.com/developer/v1/recovery?limit=7', { headers });
-      recovery = r.data.records;
-    } catch(e) {
-      return res.status(500).send('Recovery failed: ' + e.response?.status + ' ' + JSON.stringify(e.response?.data));
-    }
-
-    // Step 3: Fetch sleep data
+    // Step 2: Fetch sleep data
     let sleep;
     try {
       const s = await axios.get('https://api.prod.whoop.com/developer/v1/activity/sleep?limit=7', { headers });
@@ -68,9 +59,8 @@ app.get('/callback', async (req, res) => {
       return res.status(500).send('Sleep failed: ' + e.response?.status + ' ' + JSON.stringify(e.response?.data));
     }
 
-    // Step 4: Send to Claude
-    const whoopData = { recovery, sleep };
-
+    // Step 3: Send to Claude
+    const whoopData = { sleep };
     let claudeRes;
     try {
       claudeRes = await axios.post(
