@@ -9,7 +9,7 @@ const app = express();
 const CLIENT_ID = process.env.WHOOP_CLIENT_ID;
 const CLIENT_SECRET = process.env.WHOOP_CLIENT_SECRET;
 const REDIRECT_URI = process.env.REDIRECT_URI;
-const SCOPE = 'read:recovery read:sleep read:workout read:body_measurement read:profile';
+const SCOPE = 'read:recovery read:sleep read:workout read:body_measurement read:profile offline';
 
 // Home page
 app.get('/', (req, res) => {
