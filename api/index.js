@@ -51,9 +51,9 @@ app.get('/callback', async (req, res) => {
     // Fetch WHOOP data
     const headers = { Authorization: `Bearer ${access_token}` };
     const [recovery, sleep, cycles] = await Promise.all([
-      axios.get('https://api.prod.whoop.com/developer/v1/recovery?limit=7', { headers }),
-      axios.get('https://api.prod.whoop.com/developer/v1/sleep?limit=7', { headers }),
-      axios.get('https://api.prod.whoop.com/developer/v1/cycle?limit=7', { headers }),
+      axios.get('https://api.prod.whoop.com/developer/v1/recovery?limit=7', { headers }).catch(e => { throw new Error('Recovery failed: ' + e.response?.status) }),
+      axios.get('https://api.prod.whoop.com/developer/v1/sleep?limit=7', { headers }).catch(e => { throw new Error('Sleep failed: ' + e.response?.status) }),
+      axios.get('https://api.prod.whoop.com/developer/v1/cycle?limit=7', { headers }).catch(e => { throw new Error('Cycle failed: ' + e.response?.status) }),
     ]);
 
     const whoopData = {
