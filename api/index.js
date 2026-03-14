@@ -52,9 +52,9 @@ app.get('/callback', async (req, res) => {
 
     // Step 2: Fetch all health data
     const [profileRes, recoveryRes, sleepRes] = await Promise.allSettled([
-      axios.get('https://api.prod.whoop.com/developer/v1/user/profile/basic', { headers }),
-      axios.get('https://api.prod.whoop.com/developer/v1/recovery?limit=7', { headers }),
-      axios.get('https://api.prod.whoop.com/developer/v1/sleep?limit=7', { headers }),
+      axios.get('https://api.prod.whoop.com/developer/v2/user/profile/basic', { headers }),
+      axios.get('https://api.prod.whoop.com/developer/v2/recovery?limit=7', { headers }),
+      axios.get('https://api.prod.whoop.com/developer/v2/sleep?limit=7', { headers }),
     ]);
 
     const whoopData = {
