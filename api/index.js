@@ -62,7 +62,7 @@ app.get('/callback', async (req, res) => {
       recovery: recoveryRes.status === 'fulfilled' ? recoveryRes.value.data.records : [],
       sleep: sleepRes.status === 'fulfilled' ? sleepRes.value.data.records : [],
     };
-
+ return res.send('<pre>' + JSON.stringify(whoopData, null, 2) + '</pre>');
     // Step 3: Send to Claude
     const claudeRes = await axios.post(
       'https://api.anthropic.com/v1/messages',
