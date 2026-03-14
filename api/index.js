@@ -33,6 +33,7 @@ app.get('/callback', async (req, res) => {
   if (!code) return res.status(400).send('No code received from WHOOP');
 
   try {
+    // Step 1: Get access token
     const params = new URLSearchParams();
     params.append('grant_type', 'authorization_code');
     params.append('code', code);
@@ -47,44 +48,57 @@ app.get('/callback', async (req, res) => {
     );
 
     const { access_token } = tokenRes.data;
-
-    // Fetch WHOOP data
     const headers = { Authorization: `Bearer ${access_token}` };
-    const [recovery, sleep] = await Promise.all([
-      axios.get('https://api.prod.whoop.com/developer/v1/recovery?limit=7', { headers }),
-      axios.get('https://api.prod.whoop.com/developer/v1/activity/sleep?limit=7', { headers }),
-    ]);
 
-    const whoopData = {
-      recovery: recovery.data.records,
-      sleep: sleep.data.records,
-    };
+    // Step 2: Fetch recovery data
+    let recovery;
+    try {
+      const r = await axios.get('https://api.prod.whoop.com/developer/v1/recovery?limit=7', { headers });
+      recovery = r.data.records;
+    } catch(e) {
+      return res.status(500).send('Recovery failed: ' + e.response?.status + ' ' + JSON.stringify(e.response?.data));
+    }
 
+    // Step 3: Fetch sleep data
+    let sleep;
+    try {
+      const s = await axios.get('https://api.prod.whoop.com/developer/v1/activity/sleep?limit=7', { headers });
+      sleep = s.data.records;
+    } catch(e) {
+      return res.status(500).send('Sleep failed: ' + e.response?.status + ' ' + JSON.stringify(e.response?.data));
+    }
 
+    // Step 4: Send to Claude
+    const whoopData = { recovery, sleep };
 
-    // Send to Claude
-    const claudeRes = await axios.post(
-      'https://api.anthropic.com/v1/messages',
-      {
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: `You are a personal health coach. Analyze this WHOOP data from the past 7 days and give clear, specific insights. Tell the user what patterns you see, what's going wrong, and 3 concrete actions they should take. Be direct and specific, not generic.
+    let claudeRes;
+    try {
+      claudeRes = await axios.post(
+        'https://api.anthropic.com/v1/messages',
+        {
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: `You are a personal health coach. Analyze this WHOOP data from the past 7 days and give clear, specific insights. Tell the user what patterns you see, what is going wrong, and 3 concrete actions they should take. Be direct and specific, not generic.
 
 WHOOP Data:
 ${JSON.stringify(whoopData, null, 2)}`
-        }]
-      },
-      {
-        headers: {
-          'x-api-key': ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json'
+          }]
+        },
+        {
+          headers: {
+            'x-api-key': ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json'
+          }
         }
-      }
-    );
+      );
+    } catch(e) {
+      return res.status(500).send('Claude failed: ' + e.response?.status + ' ' + JSON.stringify(e.response?.data));
+    }
 
+    // Step 5: Show results
     const insight = claudeRes.data.content[0].text;
 
     res.send(`
@@ -108,8 +122,7 @@ ${JSON.stringify(whoopData, null, 2)}`
     `);
 
   } catch (err) {
-    console.error(err.response?.data || err.message);
-    res.status(500).send('Error: ' + JSON.stringify(err.response?.data || err.message));
+    res.status(500).send('Unexpected error: ' + JSON.stringify(err.message));
   }
 });
 
