@@ -7,8 +7,9 @@ const require = createRequire(import.meta.url);
 const pdfParse = require('pdf-parse');
 
 const app = express();
-app.use(express.json());
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 
 const CLIENT_ID = process.env.WHOOP_CLIENT_ID;
 const CLIENT_SECRET = process.env.WHOOP_CLIENT_SECRET;
@@ -137,7 +138,7 @@ ${JSON.stringify(whoopData, null, 2)}`
     const latestRecovery = whoopData.recovery?.[0]?.score?.recovery_score;
     const latestHRV = whoopData.recovery?.[0]?.score?.hrv_rmssd_milli?.toFixed(1);
     const latestRHR = whoopData.recovery?.[0]?.score?.resting_heart_rate;
-    const whoopEncoded = encodeURIComponent(JSON.stringify(whoopData));
+    const whoopEncoded = Buffer.from(JSON.stringify(whoopData)).toString('base64');
 
     res.send(`<!DOCTYPE html>
 <html lang="en">
@@ -154,8 +155,8 @@ ${JSON.stringify(whoopData, null, 2)}`
     .orb1 { width: 500px; height: 500px; background: var(--accent); top: -100px; right: -100px; }
     .orb2 { width: 400px; height: 400px; background: var(--accent2); bottom: 0; left: -100px; }
     .header { border-bottom: 1px solid var(--border); padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: rgba(8,12,18,0.9); backdrop-filter: blur(12px); z-index: 10; }
-    .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; color: var(--accent); letter-spacing: 0.05em; }
-    .refresh-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; text-decoration: none; border-radius: 100px; transition: border-color 0.2s, color 0.2s; }
+    .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; color: var(--accent); }
+    .refresh-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; text-decoration: none; border-radius: 100px; transition: border-color 0.2s; }
     .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
     .main { max-width: 860px; margin: 0 auto; padding: 48px 24px 80px; position: relative; z-index: 1; }
     .greeting { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; margin-bottom: 8px; }
@@ -182,29 +183,55 @@ ${JSON.stringify(whoopData, null, 2)}`
     .insight-card th { text-align: left; padding: 10px 12px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); }
     .insight-card td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: #b0bdd4; }
 
-    /* Upload section */
-    .upload-section { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 36px; }
-    .upload-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 8px; }
-    .upload-subtitle { color: var(--muted); font-size: 14px; margin-bottom: 24px; line-height: 1.6; }
+    /* Workout section */
+    .workout-section { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 36px; }
+    .workout-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .workout-subtitle { color: var(--muted); font-size: 14px; margin-bottom: 28px; line-height: 1.6; }
+
+    /* Tab switcher */
+    .tabs { display: flex; gap: 8px; margin-bottom: 24px; background: var(--bg); border-radius: 12px; padding: 4px; }
+    .tab { flex: 1; padding: 12px; text-align: center; border-radius: 9px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--muted); border: none; background: transparent; transition: all 0.2s; font-family: 'DM Sans', sans-serif; }
+    .tab:hover { color: var(--text); }
+    .tab.active { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+    .tab-icon { display: block; font-size: 20px; margin-bottom: 4px; }
+
+    /* Tab panels */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Photo upload */
     .upload-zone { border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; position: relative; }
     .upload-zone:hover { border-color: var(--accent); background: rgba(0,229,255,0.03); }
     .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-    .upload-icon { font-size: 32px; margin-bottom: 12px; }
-    .upload-text { color: var(--muted); font-size: 14px; }
-    .upload-text strong { color: var(--accent); }
-    .upload-btn { margin-top: 20px; padding: 14px 28px; background: linear-gradient(135deg, var(--accent), #0099bb); color: #080c12; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; border: none; border-radius: 100px; cursor: pointer; display: none; transition: transform 0.2s; }
-    .upload-btn:hover { transform: translateY(-1px); }
-    .upload-btn.visible { display: inline-block; }
-    .upload-result { margin-top: 24px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 24px; display: none; }
-    .upload-result.visible { display: block; }
-    .upload-result h2 { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; margin: 16px 0 8px; color: var(--accent); }
-    .upload-result h2:first-child { margin-top: 0; }
-    .upload-result h3 { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 600; margin: 14px 0 6px; }
-    .upload-result p { color: #b0bdd4; line-height: 1.7; margin-bottom: 10px; font-size: 14px; }
-    .upload-result ul { padding-left: 20px; }
-    .upload-result li { color: #b0bdd4; line-height: 1.7; margin-bottom: 6px; font-size: 14px; }
-    .upload-result strong { color: var(--text); }
-    .spinner-small { width: 20px; height: 20px; border: 2px solid #1e2a3a; border-top-color: #080c12; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px; }
+    .upload-zone-icon { font-size: 32px; margin-bottom: 12px; }
+    .upload-zone-text { color: var(--muted); font-size: 14px; }
+    .upload-zone-text strong { color: var(--accent); }
+
+    /* Text input */
+    .text-input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.6; resize: vertical; min-height: 160px; transition: border-color 0.2s; }
+    .text-input:focus { outline: none; border-color: var(--accent); }
+    .text-input::placeholder { color: var(--muted); }
+
+    /* File name display */
+    .file-name { margin-top: 12px; font-size: 13px; color: var(--muted); min-height: 20px; }
+
+    /* Analyze button */
+    .analyze-btn { margin-top: 20px; padding: 14px 28px; background: linear-gradient(135deg, var(--accent), #0099bb); color: #080c12; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; border: none; border-radius: 100px; cursor: pointer; transition: transform 0.2s, opacity 0.2s; width: 100%; }
+    .analyze-btn:hover { transform: translateY(-1px); }
+    .analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* Result */
+    .workout-result { margin-top: 24px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 24px; display: none; }
+    .workout-result.visible { display: block; }
+    .workout-result h2 { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; margin: 16px 0 8px; color: var(--accent); }
+    .workout-result h2:first-child { margin-top: 0; }
+    .workout-result h3 { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 600; margin: 14px 0 6px; }
+    .workout-result p { color: #b0bdd4; line-height: 1.7; margin-bottom: 10px; font-size: 14px; }
+    .workout-result ul { padding-left: 20px; }
+    .workout-result li { color: #b0bdd4; line-height: 1.7; margin-bottom: 6px; font-size: 14px; }
+    .workout-result strong { color: var(--text); }
+
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(8,12,18,0.3); border-top-color: #080c12; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
     @keyframes spin { to { transform: rotate(360deg); } }
     @media (max-width: 600px) { .metrics-grid { grid-template-columns: 1fr; } .header { padding: 16px 20px; } .main { padding: 32px 16px 60px; } }
   </style>
@@ -214,7 +241,7 @@ ${JSON.stringify(whoopData, null, 2)}`
   <div class="bg-orb orb2"></div>
   <div class="header">
     <div class="logo">VitalMind</div>
-    <a href="/login" class="refresh-btn">↻ Refresh Analysis</a>
+    <a href="/login" class="refresh-btn">↻ Refresh</a>
   </div>
   <div class="main">
     <div class="greeting">Hey, <span>${firstName}.</span></div>
@@ -227,57 +254,119 @@ ${JSON.stringify(whoopData, null, 2)}`
       </div>
       <div class="metric-card">
         <div class="metric-label">HRV (RMSSD)</div>
-        <div class="metric-value" style="color: var(--accent)">${latestHRV ?? '--'}</div>
+        <div class="metric-value" style="color:var(--accent)">${latestHRV ?? '--'}</div>
         <div class="metric-unit">milliseconds</div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Resting Heart Rate</div>
-        <div class="metric-value" style="color: var(--accent2)">${latestRHR ?? '--'}</div>
+        <div class="metric-value" style="color:var(--accent2)">${latestRHR ?? '--'}</div>
         <div class="metric-unit">beats per minute</div>
       </div>
     </div>
+
     <div class="insight-card">${insight}</div>
 
-    <div class="upload-section">
-      <div class="upload-title">📋 Upload Your Workout Plan</div>
-      <div class="upload-subtitle">Upload your workout plan (PDF or Word) and Claude will cross-reference it with your WHOOP data — telling you whether to push hard, modify, or rest today.</div>
-      <div class="upload-zone" id="uploadZone">
-        <input type="file" id="fileInput" accept=".pdf,.doc,.docx" onchange="handleFile(this)"/>
-        <div class="upload-icon">📄</div>
-        <div class="upload-text"><strong>Click to upload</strong> or drag and drop<br/>PDF or Word document</div>
+    <div class="workout-section">
+      <div class="workout-title">🏋️ Cross-reference Your Workout Plan</div>
+      <div class="workout-subtitle">Share your workout plan any way you like — Claude will tell you whether to push, modify, or rest today based on your actual biometrics.</div>
+
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('photo')"><span class="tab-icon">📸</span>Photo</button>
+        <button class="tab" onclick="switchTab('text')"><span class="tab-icon">💬</span>Type it</button>
+        <button class="tab" onclick="switchTab('file')"><span class="tab-icon">📄</span>File</button>
       </div>
-      <div id="fileName" style="margin-top:12px;font-size:13px;color:var(--muted);"></div>
-      <button class="upload-btn" id="uploadBtn" onclick="analyzeWorkout()">Analyze with my WHOOP data →</button>
-      <div class="upload-result" id="uploadResult"></div>
+
+      <!-- Photo tab -->
+      <div class="tab-panel active" id="tab-photo">
+        <div class="upload-zone">
+          <input type="file" id="photoInput" accept="image/*" onchange="handlePhoto(this)"/>
+          <div class="upload-zone-icon">📸</div>
+          <div class="upload-zone-text"><strong>Upload a photo</strong> of your workout plan<br/>Screenshot, handwritten, whiteboard — anything works</div>
+        </div>
+        <div class="file-name" id="photoName"></div>
+        <button class="analyze-btn" id="photoBtn" onclick="analyze('photo')" disabled>Analyze with my WHOOP data →</button>
+      </div>
+
+      <!-- Text tab -->
+      <div class="tab-panel" id="tab-text">
+        <textarea class="text-input" id="textInput" placeholder="e.g. Monday: Lower body — squats, lunges, hip thrusts. Tuesday: Low impact cardio 30 min. Wednesday: Upper body push. Thursday: Rest or yoga. Friday: Full body strength. Saturday: Hike or swim. Sunday: Rest."></textarea>
+        <button class="analyze-btn" id="textBtn" onclick="analyze('text')">Analyze with my WHOOP data →</button>
+      </div>
+
+      <!-- File tab -->
+      <div class="tab-panel" id="tab-file">
+        <div class="upload-zone">
+          <input type="file" id="fileInput" accept=".pdf,.doc,.docx" onchange="handleFile(this)"/>
+          <div class="upload-zone-icon">📄</div>
+          <div class="upload-zone-text"><strong>Upload your plan</strong><br/>PDF or Word document (.pdf, .doc, .docx)</div>
+        </div>
+        <div class="file-name" id="fileName"></div>
+        <button class="analyze-btn" id="fileBtn" onclick="analyze('file')" disabled>Analyze with my WHOOP data →</button>
+      </div>
+
+      <div class="workout-result" id="workoutResult"></div>
     </div>
   </div>
 
   <script>
-    let selectedFile = null;
-    const whoopData = decodeURIComponent('${whoopEncoded}');
+    const WHOOP_DATA = '${whoopEncoded}';
+    let photoFile = null;
+    let docFile = null;
 
-    function handleFile(input) {
-      selectedFile = input.files[0];
-      if (selectedFile) {
-        document.getElementById('fileName').textContent = '📎 ' + selectedFile.name;
-        document.getElementById('uploadBtn').classList.add('visible');
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      event.target.closest('.tab').classList.add('active');
+      document.getElementById('tab-' + tab).classList.add('active');
+      document.getElementById('workoutResult').classList.remove('visible');
+    }
+
+    function handlePhoto(input) {
+      photoFile = input.files[0];
+      if (photoFile) {
+        document.getElementById('photoName').textContent = '📎 ' + photoFile.name;
+        document.getElementById('photoBtn').disabled = false;
       }
     }
 
-    async function analyzeWorkout() {
-      if (!selectedFile) return;
-      const btn = document.getElementById('uploadBtn');
-      const result = document.getElementById('uploadResult');
-      btn.innerHTML = '<span class="spinner-small"></span>Analyzing...';
+    function handleFile(input) {
+      docFile = input.files[0];
+      if (docFile) {
+        document.getElementById('fileName').textContent = '📎 ' + docFile.name;
+        document.getElementById('fileBtn').disabled = false;
+      }
+    }
+
+    async function analyze(type) {
+      const result = document.getElementById('workoutResult');
+      const btnId = type === 'photo' ? 'photoBtn' : type === 'text' ? 'textBtn' : 'fileBtn';
+      const btn = document.getElementById(btnId);
+      btn.innerHTML = '<span class="spinner"></span>Analyzing...';
       btn.disabled = true;
       result.classList.remove('visible');
 
-      const formData = new FormData();
-      formData.append('workout', selectedFile);
-      formData.append('whoopData', whoopData);
-
       try {
-        const res = await fetch('/analyze-workout', { method: 'POST', body: formData });
+        let endpoint = '/analyze-workout';
+        let options = {};
+
+        if (type === 'text') {
+          const text = document.getElementById('textInput').value.trim();
+          if (!text) { btn.innerHTML = 'Analyze with my WHOOP data →'; btn.disabled = false; return; }
+          options = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'text', content: text, whoopData: WHOOP_DATA })
+          };
+        } else {
+          const formData = new FormData();
+          formData.append('whoopData', WHOOP_DATA);
+          formData.append('type', type);
+          if (type === 'photo') formData.append('file', photoFile);
+          else formData.append('file', docFile);
+          options = { method: 'POST', body: formData };
+        }
+
+        const res = await fetch(endpoint, options);
         const data = await res.json();
         result.innerHTML = data.insight;
         result.classList.add('visible');
@@ -298,44 +387,70 @@ ${JSON.stringify(whoopData, null, 2)}`
   }
 });
 
-app.post('/analyze-workout', upload.single('workout'), async (req, res) => {
+// Unified analyze endpoint
+app.post('/analyze-workout', upload.single('file'), async (req, res) => {
   try {
-    const file = req.file;
-    const whoopData = req.body.whoopData;
+    const whoopData = Buffer.from(req.body.whoopData, 'base64').toString('utf-8');
+    const type = req.body.type;
+    let messages = [];
 
-    let workoutText = '';
+    if (type === 'text') {
+      const workoutText = req.body.content;
+      messages = [{
+        role: 'user',
+        content: `You are a personal health coach. Cross-reference this workout plan with the user's WHOOP biometric data. Tell them specifically: (1) whether to push hard, modify, or rest today based on their recovery score, (2) any modifications needed given their HRV and sleep trends this week, (3) what to watch for. Format in clean HTML using only <h2>, <h3>, <p>, <ul>, <li>, <strong> tags. Be specific with actual numbers.
 
-    if (file.mimetype === 'application/pdf') {
-      const parsed = await pdfParse(file.buffer);
-      workoutText = parsed.text;
+WHOOP Data:
+${whoopData}
+
+Workout Plan:
+${workoutText}`
+      }];
+    } else if (type === 'photo') {
+      const file = req.file;
+      const base64 = file.buffer.toString('base64');
+      const mediaType = file.mimetype;
+      messages = [{
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: { type: 'base64', media_type: mediaType, data: base64 }
+          },
+          {
+            type: 'text',
+            text: `You are a personal health coach. First read the workout plan in this image. Then cross-reference it with the user's WHOOP biometric data below. Tell them specifically: (1) whether to push hard, modify, or rest today based on their recovery score, (2) any modifications needed given their HRV and sleep trends this week, (3) what to watch for. Format in clean HTML using only <h2>, <h3>, <p>, <ul>, <li>, <strong> tags. Be specific with actual numbers.
+
+WHOOP Data:
+${whoopData}`
+          }
+        ]
+      }];
     } else {
-      const result = await mammoth.extractRawText({ buffer: file.buffer });
-      workoutText = result.value;
+      const file = req.file;
+      let workoutText = '';
+      if (file.mimetype === 'application/pdf') {
+        const parsed = await pdfParse(file.buffer);
+        workoutText = parsed.text;
+      } else {
+        const result = await mammoth.extractRawText({ buffer: file.buffer });
+        workoutText = result.value;
+      }
+      messages = [{
+        role: 'user',
+        content: `You are a personal health coach. Cross-reference this workout plan with the user's WHOOP biometric data. Tell them specifically: (1) whether to push hard, modify, or rest today based on their recovery score, (2) any modifications needed given their HRV and sleep trends this week, (3) what to watch for. Format in clean HTML using only <h2>, <h3>, <p>, <ul>, <li>, <strong> tags. Be specific with actual numbers.
+
+WHOOP Data:
+${whoopData}
+
+Workout Plan:
+${workoutText.slice(0, 3000)}`
+      }];
     }
 
     const claudeRes = await axios.post(
       'https://api.anthropic.com/v1/messages',
-      {
-        model: 'claude-opus-4-5',
-        max_tokens: 1200,
-        messages: [{
-          role: 'user',
-          content: `You are a personal health coach. The user has uploaded their workout plan and you have their WHOOP biometric data from the past 7 days.
-
-Cross-reference the workout plan with their actual recovery, HRV, and sleep data. Tell them:
-1. What today's workout should look like based on their recovery score
-2. Any modifications needed given their biometric trends
-3. What to watch for this week given their data patterns
-
-Format your response in clean HTML using only <h2>, <h3>, <p>, <ul>, <li>, <strong> tags. Be specific and use actual numbers from their data.
-
-WHOOP Data (past 7 days):
-${whoopData}
-
-Their Workout Plan:
-${workoutText.slice(0, 3000)}`
-        }]
-      },
+      { model: 'claude-opus-4-5', max_tokens: 1000, messages },
       {
         headers: {
           'x-api-key': ANTHROPIC_API_KEY,
@@ -349,7 +464,7 @@ ${workoutText.slice(0, 3000)}`
 
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ insight: '<p>Error analyzing workout plan. Please try again.</p>' });
+    res.status(500).json({ insight: '<p>Error analyzing. Please try again.</p>' });
   }
 });
 
