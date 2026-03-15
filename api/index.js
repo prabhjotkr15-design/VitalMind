@@ -2,7 +2,9 @@ import express from 'express';
 import axios from 'axios';
 import multer from 'multer';
 import mammoth from 'mammoth';
-import pdfParse from 'pdf-parse/lib/pdf-parse.js';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const pdfParse = require('pdf-parse');
 
 const app = express();
 app.use(express.json());
