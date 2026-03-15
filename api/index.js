@@ -23,46 +23,369 @@ app.get('/', (req, res) => {
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>VitalMind</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <title>VitalMind — Know your body</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root { --bg: #080c12; --surface: #0f1520; --border: #1e2a3a; --accent: #00e5ff; --accent2: #7c3aed; --text: #e8f0fe; --muted: #6b7a99; }
-    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-    .bg-orb { position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.15; pointer-events: none; }
-    .orb1 { width: 600px; height: 600px; background: var(--accent); top: -200px; right: -100px; }
-    .orb2 { width: 400px; height: 400px; background: var(--accent2); bottom: -100px; left: -100px; }
-    .container { position: relative; z-index: 1; text-align: center; padding: 40px 20px; max-width: 560px; width: 100%; }
-    .logo { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--accent); margin-bottom: 48px; opacity: 0; animation: fadeUp 0.6s ease forwards; }
-    h1 { font-family: 'Syne', sans-serif; font-size: clamp(42px, 8vw, 72px); font-weight: 800; line-height: 1.05; margin-bottom: 24px; opacity: 0; animation: fadeUp 0.6s ease 0.1s forwards; }
-    h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .subtitle { font-size: 18px; color: var(--muted); line-height: 1.6; margin-bottom: 48px; font-weight: 300; opacity: 0; animation: fadeUp 0.6s ease 0.2s forwards; }
-    .connect-btn { display: inline-flex; align-items: center; gap: 12px; padding: 18px 36px; background: linear-gradient(135deg, var(--accent), #0099bb); color: #080c12; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.05em; text-decoration: none; border-radius: 100px; transition: transform 0.2s, box-shadow 0.2s; opacity: 0; animation: fadeUp 0.6s ease 0.3s forwards; box-shadow: 0 0 40px rgba(0,229,255,0.3); }
-    .connect-btn:hover { transform: translateY(-2px); box-shadow: 0 0 60px rgba(0,229,255,0.5); }
-    .features { display: flex; gap: 16px; justify-content: center; margin-top: 64px; flex-wrap: wrap; opacity: 0; animation: fadeUp 0.6s ease 0.4s forwards; }
-    .feature { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
-    .feature-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
-    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    :root {
+      --bg: #07090f;
+      --surface: #0d1117;
+      --surface2: #131a24;
+      --border: #1c2535;
+      --accent: #e8d5a3;
+      --accent2: #c9a96e;
+      --text: #f0f4ff;
+      --muted: #5a6a85;
+      --muted2: #8a9ab8;
+      --green: #4ade80;
+      --whoop: #e8d5a3;
+      --oura: #a78bfa;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Noise texture overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    /* Grid lines */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: linear-gradient(rgba(232,213,163,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(232,213,163,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Glow orbs */
+    .orb { position: fixed; border-radius: 50%; pointer-events: none; z-index: 0; }
+    .orb1 { width: 700px; height: 700px; background: radial-gradient(circle, rgba(232,213,163,0.06) 0%, transparent 70%); top: -200px; right: -200px; }
+    .orb2 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(167,139,250,0.05) 0%, transparent 70%); bottom: -100px; left: -100px; }
+
+    /* Nav */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      padding: 20px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 100;
+      background: linear-gradient(to bottom, rgba(7,9,15,0.8), transparent);
+    }
+    .nav-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.02em;
+    }
+    .nav-badge {
+      font-size: 11px;
+      color: var(--muted2);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      border: 1px solid var(--border);
+      padding: 6px 14px;
+      border-radius: 100px;
+    }
+
+    /* Hero */
+    .hero {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 120px 24px 80px;
+      text-align: center;
+    }
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      margin-bottom: 32px;
+      opacity: 0;
+      animation: fadeUp 0.8s ease 0.1s forwards;
+    }
+    .hero-eyebrow::before, .hero-eyebrow::after {
+      content: '';
+      display: block;
+      width: 32px;
+      height: 1px;
+      background: var(--accent2);
+      opacity: 0.5;
+    }
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(48px, 7vw, 88px);
+      font-weight: 800;
+      line-height: 1.05;
+      margin-bottom: 24px;
+      opacity: 0;
+      animation: fadeUp 0.8s ease 0.2s forwards;
+      max-width: 800px;
+    }
+    h1 em {
+      font-style: italic;
+      color: var(--accent);
+    }
+    .hero-sub {
+      font-size: 18px;
+      color: var(--muted2);
+      line-height: 1.7;
+      max-width: 480px;
+      margin: 0 auto 64px;
+      font-weight: 300;
+      opacity: 0;
+      animation: fadeUp 0.8s ease 0.3s forwards;
+    }
+
+    /* Wearable picker */
+    .picker-label {
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 20px;
+      opacity: 0;
+      animation: fadeUp 0.8s ease 0.4s forwards;
+    }
+    .wearable-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      max-width: 620px;
+      width: 100%;
+      margin: 0 auto 32px;
+      opacity: 0;
+      animation: fadeUp 0.8s ease 0.5s forwards;
+    }
+    .wearable-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px 16px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+      user-select: none;
+    }
+    .wearable-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity 0.25s;
+    }
+    .wearable-card.whoop::before { background: radial-gradient(circle at 50% 0%, rgba(232,213,163,0.08), transparent 70%); }
+    .wearable-card.oura::before { background: radial-gradient(circle at 50% 0%, rgba(167,139,250,0.08), transparent 70%); }
+    .wearable-card:hover { border-color: var(--muted); transform: translateY(-2px); }
+    .wearable-card:hover::before { opacity: 1; }
+    .wearable-card.selected.whoop { border-color: var(--whoop); box-shadow: 0 0 0 1px var(--whoop), 0 0 24px rgba(232,213,163,0.15); }
+    .wearable-card.selected.oura { border-color: var(--oura); box-shadow: 0 0 0 1px var(--oura), 0 0 24px rgba(167,139,250,0.15); }
+    .wearable-card.selected::before { opacity: 1; }
+    .wearable-card.disabled { opacity: 0.35; cursor: not-allowed; }
+    .wearable-card.disabled:hover { transform: none; border-color: var(--border); }
+    .wearable-icon { font-size: 32px; margin-bottom: 12px; display: block; }
+    .wearable-name { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .wearable-desc { font-size: 11px; color: var(--muted); }
+    .wearable-check {
+      position: absolute;
+      top: 12px; right: 12px;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px;
+      transition: all 0.2s;
+    }
+    .wearable-card.selected.whoop .wearable-check { background: var(--whoop); border-color: var(--whoop); color: #07090f; }
+    .wearable-card.selected.oura .wearable-check { background: var(--oura); border-color: var(--oura); color: #07090f; }
+    .coming-soon {
+      position: absolute;
+      top: 10px; right: 10px;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 3px 8px;
+      border-radius: 100px;
+      color: var(--muted);
+    }
+
+    /* CTA */
+    .cta-wrap {
+      opacity: 0;
+      animation: fadeUp 0.8s ease 0.6s forwards;
+    }
+    .connect-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 18px 40px;
+      background: var(--accent);
+      color: #07090f;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      font-size: 15px;
+      text-decoration: none;
+      border-radius: 100px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      box-shadow: 0 0 40px rgba(232,213,163,0.2);
+      letter-spacing: 0.01em;
+    }
+    .connect-btn:hover { background: var(--accent2); transform: translateY(-2px); box-shadow: 0 0 60px rgba(232,213,163,0.35); }
+    .connect-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .connect-btn svg { transition: transform 0.2s; }
+    .connect-btn:hover svg { transform: translateX(3px); }
+
+    /* Stats bar */
+    .stats-bar {
+      display: flex;
+      gap: 0;
+      justify-content: center;
+      margin-top: 80px;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      opacity: 0;
+      animation: fadeUp 0.8s ease 0.7s forwards;
+    }
+    .stat {
+      padding: 28px 40px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+      flex: 1;
+      max-width: 200px;
+    }
+    .stat:last-child { border-right: none; }
+    .stat-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--accent);
+      display: block;
+    }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; letter-spacing: 0.05em; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 600px) {
+      nav { padding: 16px 20px; }
+      .wearable-grid { grid-template-columns: 1fr; max-width: 320px; }
+      .stats-bar { flex-wrap: wrap; }
+      .stat { border-right: none; border-bottom: 1px solid var(--border); max-width: 100%; width: 100%; }
+      .stat:last-child { border-bottom: none; }
+    }
   </style>
 </head>
 <body>
-  <div class="bg-orb orb1"></div>
-  <div class="bg-orb orb2"></div>
-  <div class="container">
-    <div class="logo">VitalMind</div>
-    <h1>Your health data,<br/><span>finally explained.</span></h1>
-    <p class="subtitle">Connect your WHOOP and get AI-powered insights that actually tell you what's going wrong — and what to do about it.</p>
-    <a href="/login" class="connect-btn">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-      Connect your WHOOP
-    </a>
-    <div class="features">
-      <div class="feature"><div class="feature-dot"></div>7-day recovery trends</div>
-      <div class="feature"><div class="feature-dot"></div>Sleep stage analysis</div>
-      <div class="feature"><div class="feature-dot"></div>HRV insights</div>
-      <div class="feature"><div class="feature-dot"></div>AI health coaching</div>
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+
+  <nav>
+    <div class="nav-logo">VitalMind</div>
+    <div class="nav-badge">Early Access</div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-eyebrow">AI Health Intelligence</div>
+    <h1>Your body is<br/>talking. <em>Listen.</em></h1>
+    <p class="hero-sub">Connect your wearable and get AI-powered insights that cross-reference sleep, recovery, and activity — telling you exactly what's going wrong and what to do about it.</p>
+
+    <div class="picker-label">Choose your wearable to get started</div>
+
+    <div class="wearable-grid">
+      <div class="wearable-card whoop selected" onclick="selectWearable('whoop', this)">
+        <div class="wearable-check">✓</div>
+        <span class="wearable-icon">⌚</span>
+        <div class="wearable-name">WHOOP</div>
+        <div class="wearable-desc">Recovery & strain</div>
+      </div>
+      <div class="wearable-card oura" onclick="selectWearable('oura', this)">
+        <div class="wearable-check"></div>
+        <span class="wearable-icon">💍</span>
+        <div class="wearable-name">Oura Ring</div>
+        <div class="wearable-desc">Sleep & readiness</div>
+      </div>
+      <div class="wearable-card disabled">
+        <div class="coming-soon">Soon</div>
+        <span class="wearable-icon">⌚</span>
+        <div class="wearable-name">Apple Watch</div>
+        <div class="wearable-desc">Coming soon</div>
+      </div>
+    </div>
+
+    <div class="cta-wrap">
+      <button class="connect-btn" id="connectBtn" onclick="handleConnect()">
+        Connect your WHOOP
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat"><span class="stat-value">7</span><div class="stat-label">Days analyzed</div></div>
+      <div class="stat"><span class="stat-value">4</span><div class="stat-label">Data sources</div></div>
+      <div class="stat"><span class="stat-value">AI</span><div class="stat-label">Powered insights</div></div>
+      <div class="stat"><span class="stat-value">0</span><div class="stat-label">Apps to install</div></div>
     </div>
   </div>
+
+  <script>
+    let selected = 'whoop';
+
+    function selectWearable(type, el) {
+      document.querySelectorAll('.wearable-card:not(.disabled)').forEach(c => {
+        c.classList.remove('selected');
+        c.querySelector('.wearable-check').textContent = '';
+      });
+      el.classList.add('selected');
+      el.querySelector('.wearable-check').textContent = '✓';
+      selected = type;
+
+      const btn = document.getElementById('connectBtn');
+      if (type === 'whoop') btn.textContent = 'Connect your WHOOP →';
+      if (type === 'oura') {
+        btn.innerHTML = 'Connect Oura Ring <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+        btn.style.background = '#a78bfa';
+      } else {
+        btn.style.background = '';
+      }
+    }
+
+    function handleConnect() {
+      if (selected === 'whoop') window.location.href = '/login';
+      if (selected === 'oura') alert('Oura Ring support coming very soon!');
+    }
+  </script>
 </body>
 </html>`);
 });
