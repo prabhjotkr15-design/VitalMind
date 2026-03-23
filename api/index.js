@@ -319,6 +319,7 @@ app.post('/analyze-workout', upload.single('file'), async (req, res) => {
 app.get('/reset-password', (req, res) => res.send(getPage('reset.html')));
 
 app.post('/api/auth/request-reset', async (req, res) => {
+  console.log('RESET ROUTE HIT:', req.body);
   try {
     const { email } = req.body;
     if (!email) throw new Error('Email required');
