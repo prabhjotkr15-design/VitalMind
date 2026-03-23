@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VitalMind — Reset Password</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#0c0a0b;--surface:#141112;--border:rgba(255,235,225,0.06);--border-h:rgba(255,235,225,0.12);--accent:#e09070;--accent-bright:#f0a888;--text:#f0ece8;--text-dim:rgba(240,236,232,0.5);--text-xdim:rgba(240,236,232,0.28);--red:#e05555;--green:#5cc88a}
+    body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;font-weight:300;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;-webkit-font-smoothing:antialiased}
+    .orb{position:fixed;border-radius:50%;pointer-events:none;filter:blur(120px)}
+    .orb1{width:500px;height:500px;background:rgba(224,144,112,0.04);top:-150px;right:-150px}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:44px 40px;max-width:420px;width:100%;position:relative;z-index:1}
+    .logo{font-family:'Instrument Serif',serif;font-size:22px;color:var(--accent);text-align:center;margin-bottom:36px;letter-spacing:-0.02em}
+    .title{font-family:'Instrument Serif',serif;font-size:26px;text-align:center;margin-bottom:8px;letter-spacing:-0.02em}
+    .title i{font-style:italic;color:var(--accent)}
+    .subtitle{font-size:14px;color:var(--text-dim);text-align:center;line-height:1.6;margin-bottom:32px}
+    .field{margin-bottom:18px}
+    .field label{display:block;font-size:12px;color:var(--text-xdim);letter-spacing:0.06em;margin-bottom:8px;text-transform:uppercase}
+    .field input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:13px 16px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;font-weight:300;transition:border-color 0.2s}
+    .field input:focus{outline:none;border-color:var(--accent)}
+    .submit-btn{width:100%;padding:15px;background:var(--accent);color:var(--bg);font-family:'Outfit',sans-serif;font-weight:500;font-size:14px;border:none;border-radius:10px;cursor:pointer;transition:all 0.2s;margin-top:4px}
+    .submit-btn:hover{background:var(--accent-bright)}
+    .submit-btn:disabled{opacity:0.5;cursor:not-allowed}
+    .msg{font-size:13px;margin-top:14px;text-align:center;display:none;line-height:1.5}
+    .msg.err{color:var(--red);display:block}
+    .msg.ok{color:var(--green);display:block}
+    .back{display:block;text-align:center;margin-top:20px;font-size:13px;color:var(--text-xdim);text-decoration:none;transition:color 0.2s}
+    .back:hover{color:var(--accent)}
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(12,10,11,0.3);border-top-color:var(--bg);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:6px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .screen{display:none}
+    .screen.active{display:block}
+  </style>
+</head>
+<body>
+  <div class="orb orb1"></div>
+  <div class="card">
+    <div class="logo">VitalMind</div>
+
+    <div class="screen active" id="requestScreen">
+      <div class="title">Reset your <i>password</i></div>
+      <div class="subtitle">Enter your email and we'll send you a reset link.</div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="resetEmail" placeholder="you@example.com"/>
+      </div>
+      <button class="submit-btn" id="requestBtn" onclick="requestReset()">Send reset link</button>
+      <div class="msg" id="requestMsg"></div>
+      <a href="/auth" class="back">Back to sign in</a>
+    </div>
+
+    <div class="screen" id="newPwScreen">
+      <div class="title">New <i>password</i></div>
+      <div class="subtitle">Choose a new password for your account.</div>
+      <div class="field">
+        <label>New password</label>
+        <input type="password" id="newPw" placeholder="At least 8 characters"/>
+      </div>
+      <div class="field">
+        <label>Confirm password</label>
+        <input type="password" id="confirmPw" placeholder="Type it again"/>
+      </div>
+      <button class="submit-btn" id="resetBtn" onclick="doReset()">Reset password</button>
+      <div class="msg" id="resetMsg"></div>
+    </div>
+  </div>
+
+  <script>
+    var token = new URLSearchParams(window.location.search).get('token');
+    if (token) {
+      document.getElementById('requestScreen').classList.remove('active');
+      document.getElementById('newPwScreen').classList.add('active');
+    }
+
+    async function requestReset() {
+      var email = document.getElementById('resetEmail').value.trim();
+      var btn = document.getElementById('requestBtn');
+      var msg = document.getElementById('requestMsg');
+      if (!email) { msg.className = 'msg err'; msg.textContent = 'Please enter your email.'; return; }
+      btn.innerHTML = '<span class="spinner"></span>Sending...';
+      btn.disabled = true;
+      msg.className = 'msg'; msg.style.display = 'none';
+      try {
+        var res = await fetch('/api/auth/request-reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email })
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        msg.className = 'msg ok';
+        msg.textContent = 'Check your email for a reset link. It expires in 1 hour.';
+      } catch(e) {
+        msg.className = 'msg err';
+        msg.textContent = e.message;
+      }
+      btn.innerHTML = 'Send reset link';
+      btn.disabled = false;
+    }
+
+    async function doReset() {
+      var pw = document.getElementById('newPw').value;
+      var confirm = document.getElementById('confirmPw').value;
+      var btn = document.getElementById('resetBtn');
+      var msg = document.getElementById('resetMsg');
+      if (pw.length < 8) { msg.className = 'msg err'; msg.textContent = 'Password must be at least 8 characters.'; return; }
+      if (pw !== confirm) { msg.className = 'msg err'; msg.textContent = 'Passwords do not match.'; return; }
+      btn.innerHTML = '<span class="spinner"></span>Resetting...';
+      btn.disabled = true;
+      msg.className = 'msg'; msg.style.display = 'none';
+      try {
+        var res = await fetch('/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token, password: pw })
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        msg.className = 'msg ok';
+        msg.textContent = 'Password reset! Redirecting to sign in...';
+        setTimeout(function() { window.location.href = '/auth'; }, 2000);
+      } catch(e) {
+        msg.className = 'msg err';
+        msg.textContent = e.message;
+      }
+      btn.innerHTML = 'Reset password';
+      btn.disabled = false;
+    }
+  </script>
+</body>
+</html>

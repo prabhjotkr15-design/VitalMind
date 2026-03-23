@@ -315,6 +315,55 @@ app.post('/analyze-workout', upload.single('file'), async (req, res) => {
   }
 });
 
+
+app.get('/reset-password', (req, res) => res.send(getPage('reset.html')));
+
+app.post('/api/auth/request-reset', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) throw new Error('Email required');
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const { data: user } = await supabase.from('users').select().eq('email', email).single();
+    if (!user) { res.json({ ok: true }); return; }
+    const crypto = await import('crypto');
+    const token = crypto.default.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 3600000).toISOString();
+    await supabase.from('reset_tokens').insert({ user_id: user.id, token, expires_at: expiresAt });
+    const resetUrl = (process.env.REDIRECT_URI || '').replace('/callback', '') + '/reset-password?token=' + token;
+    const response = await axios.post('https://api.resend.com/emails', {
+      from: 'VitalMind <onboarding@resend.dev>',
+      to: [email],
+      subject: 'Reset your VitalMind password',
+      html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:40px 20px"><h2 style="color:#e09070;margin-bottom:16px">Reset your password</h2><p style="color:#666;line-height:1.6;margin-bottom:24px">Click the button below to reset your VitalMind password. This link expires in 1 hour.</p><a href="' + resetUrl + '" style="display:inline-block;padding:14px 32px;background:#e09070;color:#fff;text-decoration:none;border-radius:8px;font-weight:500">Reset password</a><p style="color:#999;font-size:13px;margin-top:32px">If you did not request this, ignore this email.</p></div>'
+    }, { headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' } });
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('Reset error:', e.message);
+    res.json({ ok: true });
+  }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) throw new Error('Token and password required');
+    if (password.length < 8) throw new Error('Password must be at least 8 characters');
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const { data: resetToken } = await supabase.from('reset_tokens').select().eq('token', token).eq('used', false).single();
+    if (!resetToken) throw new Error('Invalid or expired reset link');
+    if (new Date(resetToken.expires_at) < new Date()) throw new Error('Reset link has expired');
+    const bcrypt = await import('bcryptjs');
+    const password_hash = await bcrypt.default.hash(password, 10);
+    await supabase.from('users').update({ password_hash }).eq('id', resetToken.user_id);
+    await supabase.from('reset_tokens').update({ used: true }).eq('id', resetToken.id);
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
 app.get('/logout', (req, res) => {
   res.clearCookie('vm_token');
   res.redirect('/');
