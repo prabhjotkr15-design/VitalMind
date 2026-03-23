@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VitalMind — Connect WHOOP</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#07090f;--surface:#0d1117;--border:#1c2535;--accent:#e8d5a3;--accent2:#c9a96e;--text:#f0f4ff;--muted:#5a6a85;--muted2:#8a9ab8}
+    body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .orb{position:fixed;border-radius:50%;pointer-events:none}
+    .orb1{width:600px;height:600px;background:radial-gradient(circle,rgba(232,213,163,0.05) 0%,transparent 70%);top:-200px;right:-200px}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:48px 40px;max-width:440px;width:100%;position:relative;z-index:1;text-align:center}
+    .logo{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--accent);margin-bottom:40px}
+    .icon{font-size:48px;margin-bottom:20px}
+    h2{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;margin-bottom:12px}
+    h2 em{font-style:italic;color:var(--accent)}
+    p{color:var(--muted2);font-size:15px;line-height:1.6;margin-bottom:32px}
+    .connect-btn{display:inline-flex;align-items:center;gap:10px;padding:16px 32px;background:var(--accent);color:#07090f;font-family:'DM Sans',sans-serif;font-weight:600;font-size:14px;border:none;border-radius:100px;cursor:pointer;transition:all .2s;text-decoration:none}
+    .connect-btn:hover{background:var(--accent2);transform:translateY(-2px)}
+    .skip{display:block;margin-top:16px;font-size:13px;color:var(--muted);cursor:pointer;transition:color .2s}
+    .skip:hover{color:var(--muted2)}
+  </style>
+</head>
+<body>
+  <div class="orb orb1"></div>
+  <div class="card">
+    <div class="logo">VitalMind</div>
+    <div class="icon">⌚</div>
+    <h2>Connect your <em>WHOOP</em></h2>
+    <p>Link your WHOOP once and VitalMind will automatically fetch your latest data every time you visit — no reconnecting needed.</p>
+    <a href="/login" class="connect-btn">Connect WHOOP →</a>
+    <a href="/" class="skip">Maybe later</a>
+  </div>
+</body>
+</html>

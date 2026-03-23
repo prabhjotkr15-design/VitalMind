@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VitalMind — Sign In</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#07090f;--surface:#0d1117;--border:#1c2535;--accent:#e8d5a3;--accent2:#c9a96e;--text:#f0f4ff;--muted:#5a6a85;--muted2:#8a9ab8;--red:#ef4444}
+    body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .orb{position:fixed;border-radius:50%;pointer-events:none}
+    .orb1{width:600px;height:600px;background:radial-gradient(circle,rgba(232,213,163,0.05) 0%,transparent 70%);top:-200px;right:-200px}
+    .orb2{width:400px;height:400px;background:radial-gradient(circle,rgba(167,139,250,0.04) 0%,transparent 70%);bottom:-100px;left:-100px}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:40px;max-width:400px;width:100%;position:relative;z-index:1}
+    .logo{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--accent);text-align:center;margin-bottom:32px}
+    .tabs{display:flex;background:var(--bg);border-radius:10px;padding:3px;margin-bottom:28px}
+    .tab{flex:1;padding:10px;text-align:center;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;color:var(--muted);border:none;background:transparent;font-family:'DM Sans',sans-serif;transition:all .2s}
+    .tab.active{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+    .form{display:none}
+    .form.active{display:block}
+    .field{margin-bottom:16px}
+    .field label{display:block;font-size:12px;color:var(--muted);letter-spacing:.05em;margin-bottom:8px}
+    .field input{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:13px 16px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;transition:border-color .2s}
+    .field input:focus{outline:none;border-color:var(--accent2)}
+    .submit-btn{width:100%;padding:15px;background:var(--accent);color:#07090f;font-family:'DM Sans',sans-serif;font-weight:600;font-size:14px;border:none;border-radius:10px;cursor:pointer;transition:all .2s;margin-top:8px}
+    .submit-btn:hover{background:var(--accent2)}
+    .submit-btn:disabled{opacity:.5;cursor:not-allowed}
+    .error{color:var(--red);font-size:13px;margin-top:12px;display:none}
+    .error.visible{display:block}
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(7,9,15,0.3);border-top-color:#07090f;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="card">
+    <div class="logo">VitalMind</div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">Sign In</button>
+      <button class="tab" onclick="switchTab('signup')">Create Account</button>
+    </div>
+    <div class="form active" id="loginForm">
+      <div class="field"><label>Email</label><input type="email" id="loginEmail" placeholder="you@example.com"/></div>
+      <div class="field"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••••"/></div>
+      <button class="submit-btn" id="loginBtn" onclick="handleLogin()">Sign In →</button>
+      <div class="error" id="loginError"></div>
+    </div>
+    <div class="form" id="signupForm">
+      <div class="field"><label>Email</label><input type="email" id="signupEmail" placeholder="you@example.com"/></div>
+      <div class="field"><label>Password</label><input type="password" id="signupPassword" placeholder="At least 8 characters"/></div>
+      <button class="submit-btn" id="signupBtn" onclick="handleSignup()">Create Account →</button>
+      <div class="error" id="signupError"></div>
+    </div>
+  </div>
+  <script>
+    const redirect = new URLSearchParams(window.location.search).get('redirect') || '/';
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='signup')));
+      document.getElementById('loginForm').classList.toggle('active', tab==='login');
+      document.getElementById('signupForm').classList.toggle('active', tab==='signup');
+    }
+
+    async function handleLogin() {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const btn = document.getElementById('loginBtn');
+      const err = document.getElementById('loginError');
+      btn.innerHTML = '<span class="spinner"></span>Signing in...';
+      btn.disabled = true;
+      err.classList.remove('visible');
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        document.cookie = 'vm_token=' + data.token + ';path=/;max-age=2592000';
+        window.location.href = redirect;
+      } catch(e) {
+        err.textContent = e.message;
+        err.classList.add('visible');
+        btn.innerHTML = 'Sign In →';
+        btn.disabled = false;
+      }
+    }
+
+    async function handleSignup() {
+      const email = document.getElementById('signupEmail').value.trim();
+      const password = document.getElementById('signupPassword').value;
+      const btn = document.getElementById('signupBtn');
+      const err = document.getElementById('signupError');
+      btn.innerHTML = '<span class="spinner"></span>Creating account...';
+      btn.disabled = true;
+      err.classList.remove('visible');
+      try {
+        const res = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        document.cookie = 'vm_token=' + data.token + ';path=/;max-age=2592000';
+        window.location.href = redirect;
+      } catch(e) {
+        err.textContent = e.message;
+        err.classList.add('visible');
+        btn.innerHTML = 'Create Account →';
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
