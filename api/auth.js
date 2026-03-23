@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { encrypt, decrypt } from './encrypt.js';
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -36,12 +37,14 @@ export async function login(email, password) {
 
 export async function saveWhoopTokens(userId, accessToken, refreshToken) {
   const expiresAt = new Date(Date.now() + 3600 * 1000).toISOString();
+  const encryptedAccess = encrypt(accessToken);
+  const encryptedRefresh = refreshToken ? encrypt(refreshToken) : null;
   const { error } = await supabase
     .from('whoop_tokens')
     .upsert({
       user_id: userId,
-      access_token: accessToken,
-      refresh_token: refreshToken,
+      access_token: encryptedAccess,
+      refresh_token: encryptedRefresh,
       expires_at: expiresAt,
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' });
@@ -55,7 +58,19 @@ export async function getWhoopTokens(userId) {
     .eq('user_id', userId)
     .single();
   if (error || !data) return null;
-  return data;
+  try {
+    return {
+      access_token: decrypt(data.access_token),
+      refresh_token: data.refresh_token ? decrypt(data.refresh_token) : null,
+      expires_at: data.expires_at
+    };
+  } catch(e) {
+    return {
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at: data.expires_at
+    };
+  }
 }
 
 export async function saveProfile(userId, profile) {
