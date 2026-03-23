@@ -3,9 +3,14 @@ import axios from 'axios';
 import multer from 'multer';
 import mammoth from 'mammoth';
 import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const pdfParse = require('pdf-parse');
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 app.use(express.json({ limit: '20mb' }));
@@ -18,7 +23,9 @@ const REDIRECT_URI = process.env.REDIRECT_URI;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const SCOPE = 'read:recovery read:sleep read:workout read:body_measurement read:profile offline';
 
-app.get('/', (req, res) => res.send(readFileSync(new URL('./pages/', import.meta.url).pathname + 'home.html', 'utf-8')));
+const getPage = (name) => readFileSync(join(__dirname, 'pages', name), 'utf-8');
+
+app.get('/', (req, res) => res.send(getPage('home.html')));
 
 app.get('/login', (req, res) => {
   const state = Math.random().toString(36).substring(2, 12);
@@ -66,9 +73,8 @@ app.get('/callback', async (req, res) => {
 });
 
 app.get('/onboarding', (req, res) => {
-  const html = readFileSync(new URL('./pages/', import.meta.url).pathname + 'onboarding.html', 'utf-8');
-  const whoopData = req.query.data || '';
-  res.send(html.replace('__WHOOP_DATA__', whoopData));
+  const html = getPage('onboarding.html').replace('__WHOOP_DATA__', req.query.data || '');
+  res.send(html);
 });
 
 app.get('/insights', async (req, res) => {
@@ -95,7 +101,7 @@ app.get('/insights', async (req, res) => {
     const insight = claudeRes.data.content[0].text;
     const whoopEncoded = Buffer.from(JSON.stringify(whoopData)).toString('base64');
     const profileEncoded = Buffer.from(JSON.stringify(userProfile)).toString('base64');
-    let html = readFileSync(new URL('./pages/', import.meta.url).pathname + 'insights.html', 'utf-8');
+    let html = getPage('insights.html');
     html = html
       .replace(/__FIRST_NAME__/g, firstName)
       .replace(/__RECOVERY__/g, latestRecovery ?? '--')
