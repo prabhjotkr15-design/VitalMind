@@ -2,6 +2,7 @@ import express from 'express';
 import axios from 'axios';
 import multer from 'multer';
 import mammoth from 'mammoth';
+import cookieParser from 'cookie-parser';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -15,6 +16,7 @@ const __dirname = dirname(__filename);
 const app = express();
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+app.use(cookieParser());
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 
 const CLIENT_ID = process.env.WHOOP_CLIENT_ID;
@@ -25,31 +27,32 @@ const SCOPE = 'read:recovery read:sleep read:workout read:body_measurement read:
 
 const getPage = (name) => readFileSync(join(__dirname, 'pages', name), 'utf-8');
 
-// Home page
 app.get('/', (req, res) => res.send(getPage('home.html')));
 
-// Step 1: Start OAuth — carry profile through state param
 app.get('/login', (req, res) => {
   const state = Math.random().toString(36).substring(2, 12);
   const profile = req.query.profile || '';
-  const stateWithProfile = state + '|' + profile;
+
+  // Store profile in cookie — not in state
+  if (profile) {
+    res.cookie('vm_profile', profile, { maxAge: 600000, httpOnly: false });
+  }
+
   const url = new URL('https://api.prod.whoop.com/oauth/oauth2/auth');
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('client_id', CLIENT_ID);
   url.searchParams.set('redirect_uri', REDIRECT_URI);
   url.searchParams.set('scope', SCOPE);
-  url.searchParams.set('state', stateWithProfile);
+  url.searchParams.set('state', state);
   res.redirect(url.toString());
 });
 
-// Step 2: WHOOP sends back code + state
 app.get('/callback', async (req, res) => {
-  const { code, state } = req.query;
+  const { code } = req.query;
   if (!code) return res.status(400).send('No code received from WHOOP');
 
-  // Extract profile from state
-  const parts = (state || '').split('|');
-  const profile = parts[1] || '';
+  // Read profile from cookie
+  const profile = req.cookies?.vm_profile || '';
 
   try {
     const params = new URLSearchParams();
@@ -88,7 +91,6 @@ app.get('/callback', async (req, res) => {
   }
 });
 
-// Step 3: Insights page
 app.get('/insights', async (req, res) => {
   try {
     const whoopData = JSON.parse(Buffer.from(req.query.data, 'base64').toString('utf-8'));
@@ -140,7 +142,6 @@ app.get('/insights', async (req, res) => {
   }
 });
 
-// Analyze workout
 app.post('/analyze-workout', upload.single('file'), async (req, res) => {
   try {
     const whoopData = Buffer.from(req.body.whoopData, 'base64').toString('utf-8');
@@ -151,7 +152,7 @@ app.post('/analyze-workout', upload.single('file'), async (req, res) => {
       messages = [{ role: 'user', content: `You are a personal health coach. Cross-reference this workout plan with the WHOOP data. Tell them: (1) push, modify, or rest today based on recovery score, (2) modifications needed given HRV and sleep trends, (3) what to watch for. Format in clean HTML using h2, h3, p, ul, li, strong tags. Use actual numbers.\n\nWHOOP Data:\n${whoopData}\n\nWorkout Plan:\n${req.body.content}` }];
     } else if (type === 'photo') {
       const base64 = req.file.buffer.toString('base64');
-      messages = [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: req.file.mimetype, data: base64 } }, { type: 'text', text: `You are a personal health coach. Read the workout plan in this image. Cross-reference with WHOOP data below. Tell them: (1) push, modify, or rest today, (2) modifications needed, (3) what to watch for. Format in clean HTML.\n\nWHOOP Data:\n${whoopData}` }] }];
+      messages = [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: req.file.mimetype, data: base64 } }, { type: 'text', text: `You are a personal health coach. Read the workout plan in this image. Cross-reference with WHOOP data below. Format in clean HTML.\n\nWHOOP Data:\n${whoopData}` }] }];
     } else {
       let workoutText = '';
       if (req.file.mimetype === 'application/pdf') { const parsed = await pdfParse(req.file.buffer); workoutText = parsed.text; }
