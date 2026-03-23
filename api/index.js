@@ -371,6 +371,11 @@ app.post('/api/auth/reset-password', async (req, res) => {
   }
 });
 
+app.post('/api/daily-brief', async (req, res) => {
+  const handler = (await import('./daily-brief.js')).default;
+  return handler(req, res);
+});
+
 app.get('/logout', (req, res) => {
   res.clearCookie('vm_token');
   res.redirect('/');
