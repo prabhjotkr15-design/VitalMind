@@ -333,12 +333,15 @@ app.post('/api/auth/request-reset', async (req, res) => {
     const expiresAt = new Date(Date.now() + 3600000).toISOString();
     await supabase.from('reset_tokens').insert({ user_id: user.id, token, expires_at: expiresAt });
     const resetUrl = (process.env.REDIRECT_URI || '').replace('/callback', '') + '/reset-password?token=' + token;
-    const response = await axios.post('https://api.resend.com/emails', {
+    const { Resend } = await import('resend');
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    await resend.emails.send({
       from: 'VitalMind <onboarding@resend.dev>',
       to: [email],
       subject: 'Reset your VitalMind password',
-      html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:40px 20px"><h2 style="color:#e09070;margin-bottom:16px">Reset your password</h2><p style="color:#666;line-height:1.6;margin-bottom:24px">Click the button below to reset your VitalMind password. This link expires in 1 hour.</p><a href="' + resetUrl + '" style="display:inline-block;padding:14px 32px;background:#e09070;color:#fff;text-decoration:none;border-radius:8px;font-weight:500">Reset password</a><p style="color:#999;font-size:13px;margin-top:32px">If you did not request this, ignore this email.</p></div>'
-    }, { headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' } });
+      html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:40px 20px"><h2 style="color:#e09070">Reset your password</h2><p style="color:#666;line-height:1.6;margin-bottom:24px">Click below to reset your VitalMind password. Link expires in 1 hour.</p><a href="' + resetUrl + '" style="display:inline-block;padding:14px 32px;background:#e09070;color:#fff;text-decoration:none;border-radius:8px;font-weight:500">Reset password</a><p style="color:#999;font-size:13px;margin-top:32px">If you did not request this, ignore this email.</p></div>'
+    });
+    console.log('RESET: email sent successfully to', email);
     res.json({ ok: true });
   } catch(e) {
     console.error('Reset error:', e.message, e.response?.data || '');
