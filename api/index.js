@@ -50,6 +50,7 @@ app.get('/debug-env', (req, res) => {
   });
 });
 
+app.get("/debug-env", (req, res) => { res.json({ WHOOP_CLIENT_ID: process.env.WHOOP_CLIENT_ID ? "SET" : "MISSING", WHOOP_CLIENT_SECRET: process.env.WHOOP_CLIENT_SECRET ? "SET" : "MISSING", REDIRECT_URI: process.env.REDIRECT_URI ? "SET" : "MISSING", ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ? "SET" : "MISSING", SUPABASE_URL: process.env.SUPABASE_URL ? "SET" : "MISSING", SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? "SET" : "MISSING", JWT_SECRET: process.env.JWT_SECRET ? "SET" : "MISSING", ENCRYPTION_KEY: process.env.ENCRYPTION_KEY ? "SET" : "MISSING", RESEND_API_KEY: process.env.RESEND_API_KEY ? "SET" : "MISSING" }); });
 app.get('/', (req, res) => {
   const user = getUser(req);
   if (user) return res.redirect('/dashboard');
