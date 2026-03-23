@@ -75,6 +75,7 @@ export default async function handler(req, res) {
 
     for (const tokenRow of allTokens) {
       try {
+        console.log('Processing user:', tokenRow.user_id);
         let accessToken;
         try { accessToken = decrypt(tokenRow.access_token); }
         catch(e) { accessToken = tokenRow.access_token; }
@@ -85,7 +86,8 @@ export default async function handler(req, res) {
         const { data: profile } = await supabase.from('user_profiles').select().eq('user_id', tokenRow.user_id).single();
 
         const whoopData = await fetchWhoopData(accessToken);
-        if (!whoopData.recovery?.length) continue;
+        console.log('Recovery records:', whoopData.recovery?.length, 'Profile:', whoopData.profile?.first_name);
+        if (!whoopData.recovery?.length) { console.log('SKIP: no recovery data'); continue; }
 
         const { insight, firstName, latestRecovery, latestHRV, latestRHR } = await generateInsight(whoopData, profile);
 
