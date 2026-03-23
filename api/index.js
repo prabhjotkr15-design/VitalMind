@@ -333,6 +333,7 @@ app.post('/api/auth/request-reset', async (req, res) => {
     const expiresAt = new Date(Date.now() + 3600000).toISOString();
     await supabase.from('reset_tokens').insert({ user_id: user.id, token, expires_at: expiresAt });
     const resetUrl = (process.env.REDIRECT_URI || '').replace('/callback', '') + '/reset-password?token=' + token;
+    console.log('RESEND KEY starts with:', (process.env.RESEND_API_KEY || 'NOT SET').substring(0, 8));
     const { Resend } = await import('resend');
     const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({
