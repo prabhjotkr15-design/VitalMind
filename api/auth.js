@@ -95,6 +95,38 @@ export async function getProfile(userId) {
   return data;
 }
 
+
+export async function refreshWhoopToken(userId) {
+  const { data: tokenRow } = await supabase
+    .from('whoop_tokens')
+    .select()
+    .eq('user_id', userId)
+    .single();
+  if (!tokenRow?.refresh_token) return null;
+
+  let refreshToken;
+  try { refreshToken = decrypt(tokenRow.refresh_token); }
+  catch(e) { refreshToken = tokenRow.refresh_token; }
+
+  if (!refreshToken) return null;
+
+  const params = new URLSearchParams();
+  params.append('grant_type', 'refresh_token');
+  params.append('refresh_token', refreshToken);
+  params.append('client_id', process.env.WHOOP_CLIENT_ID);
+  params.append('client_secret', process.env.WHOOP_CLIENT_SECRET);
+
+  const response = await (await import('axios')).default.post(
+    'https://api.prod.whoop.com/oauth/oauth2/token',
+    params,
+    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+  );
+
+  const { access_token, refresh_token: newRefresh } = response.data;
+  await saveWhoopTokens(userId, access_token, newRefresh || refreshToken);
+  return access_token;
+}
+
 export function verifyToken(token) {
   return jwt.verify(token, JWT_SECRET);
 }

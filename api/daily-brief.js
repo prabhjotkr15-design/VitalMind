@@ -2,6 +2,7 @@ import axios from 'axios';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { decrypt } from './encrypt.js';
+import { refreshWhoopToken } from './auth.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -85,9 +86,21 @@ export default async function handler(req, res) {
 
         const { data: profile } = await supabase.from('user_profiles').select().eq('user_id', tokenRow.user_id).single();
 
-        const whoopData = await fetchWhoopData(accessToken);
-        console.log('Recovery records:', whoopData.recovery?.length, 'Profile:', whoopData.profile?.first_name);
-        if (!whoopData.recovery?.length) { console.log('SKIP: no recovery data'); continue; }
+        let whoopData = await fetchWhoopData(accessToken);
+
+        if (!whoopData.recovery?.length) {
+          console.log('Token may be expired, attempting refresh for user:', tokenRow.user_id);
+          try {
+            const newToken = await refreshWhoopToken(tokenRow.user_id);
+            if (newToken) {
+              whoopData = await fetchWhoopData(newToken);
+            }
+          } catch(refreshErr) {
+            console.log('Refresh failed:', refreshErr.message);
+          }
+        }
+
+        if (!whoopData.recovery?.length) { console.log('SKIP: still no recovery data after refresh'); continue; }
 
         const { insight, firstName, latestRecovery, latestHRV, latestRHR } = await generateInsight(whoopData, profile);
 

@@ -7,7 +7,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { createRequire } from 'module';
-import { signup, login, saveWhoopTokens, getWhoopTokens, saveProfile, getProfile, verifyToken } from './auth.js';
+import { signup, login, saveWhoopTokens, getWhoopTokens, saveProfile, getProfile, verifyToken, refreshWhoopToken } from './auth.js';
 const require = createRequire(import.meta.url);
 const pdfParse = require('pdf-parse');
 
@@ -173,11 +173,21 @@ app.get('/insights-stored', async (req, res) => {
   if (!user) return res.redirect('/auth');
 
   try {
-    const tokens = await getWhoopTokens(user.userId);
+    let tokens = await getWhoopTokens(user.userId);
     if (!tokens) return res.redirect('/connect-whoop');
 
     const userProfile = await getProfile(user.userId) || {};
-    const headers = { Authorization: 'Bearer ' + tokens.access_token };
+    let headers = { Authorization: 'Bearer ' + tokens.access_token };
+
+    const testRes = await axios.get('https://api.prod.whoop.com/developer/v1/user/profile/basic', { headers }).catch(e => e.response);
+    if (testRes?.status === 401) {
+      try {
+        const newToken = await refreshWhoopToken(user.userId);
+        if (newToken) {
+          headers = { Authorization: 'Bearer ' + newToken };
+        }
+      } catch(e) { return res.redirect('/login'); }
+    }
 
     const [profileRes, recoveryRes, sleepRes] = await Promise.allSettled([
       axios.get('https://api.prod.whoop.com/developer/v1/user/profile/basic', { headers }),
