@@ -325,7 +325,8 @@ app.post('/api/auth/request-reset', async (req, res) => {
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
     const { data: user } = await supabase.from('users').select().eq('email', email).single();
-    if (!user) { res.json({ ok: true }); return; }
+    if (!user) { console.log('RESET DEBUG: no user found for email:', email); res.json({ ok: true }); return; }
+    console.log('RESET DEBUG: user found, sending email to:', email);
     const crypto = await import('crypto');
     const token = crypto.default.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 3600000).toISOString();
