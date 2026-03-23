@@ -28,36 +28,28 @@ const SCOPE = 'read:recovery read:sleep read:workout read:body_measurement read:
 
 const getPage = (name) => readFileSync(join(__dirname, 'pages', name), 'utf-8');
 
-// Auth middleware
 function getUser(req) {
   try {
     const token = req.cookies?.vm_token;
     if (!token) return null;
     return verifyToken(token);
-  } catch(e) {
-    return null;
-  }
+  } catch(e) { return null; }
 }
 
-// Home
 app.get('/', (req, res) => {
   const user = getUser(req);
   if (user) return res.redirect('/dashboard');
   res.send(getPage('home.html'));
 });
 
-// Auth page
 app.get('/auth', (req, res) => res.send(getPage('auth.html')));
 
-// Auth API routes
 app.post('/api/auth/signup', async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) throw new Error('Email and password required');
     if (password.length < 8) throw new Error('Password must be at least 8 characters');
     const { token, userId } = await signup(email, password);
-
-    // Save profile if provided
     const profile = req.body.profile;
     if (profile) {
       try {
@@ -65,7 +57,6 @@ app.post('/api/auth/signup', async (req, res) => {
         await saveProfile(userId, p);
       } catch(e) {}
     }
-
     res.json({ token, userId });
   } catch(e) {
     res.status(400).json({ error: e.message });
@@ -83,33 +74,33 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Dashboard — requires login
 app.get('/dashboard', async (req, res) => {
   const user = getUser(req);
   if (!user) return res.redirect('/auth?redirect=/dashboard');
-
-  // Check if WHOOP is connected
   const tokens = await getWhoopTokens(user.userId);
-  if (!tokens) {
-    return res.redirect('/connect-whoop');
-  }
-
-  // Redirect to insights with stored token
+  if (!tokens) return res.redirect('/connect-whoop');
   res.redirect('/insights-stored');
 });
 
-// Connect WHOOP page
 app.get('/connect-whoop', (req, res) => {
   const user = getUser(req);
   if (!user) return res.redirect('/auth?redirect=/connect-whoop');
   res.send(getPage('connect.html'));
 });
 
-// Login with WHOOP OAuth
+// Pass JWT token through state so it survives the WHOOP redirect
 app.get('/login', (req, res) => {
-  const state = Math.random().toString(36).substring(2, 12);
+  const user = getUser(req);
   const profile = req.query.profile || '';
   if (profile) res.cookie('vm_profile', profile, { maxAge: 600000, httpOnly: false });
+
+  // Encode user token in state so we can identify user after WHOOP redirect
+  const stateData = {
+    r: Math.random().toString(36).substring(2, 8),
+    t: user ? req.cookies.vm_token : null
+  };
+  const state = Buffer.from(JSON.stringify(stateData)).toString('base64');
+
   const url = new URL('https://api.prod.whoop.com/oauth/oauth2/auth');
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('client_id', CLIENT_ID);
@@ -119,14 +110,18 @@ app.get('/login', (req, res) => {
   res.redirect(url.toString());
 });
 
-// WHOOP callback
 app.get('/callback', async (req, res) => {
-  const { code } = req.query;
+  const { code, state } = req.query;
   if (!code) return res.status(400).send('No code received from WHOOP');
+
+  // Extract user token from state
+  let user = null;
+  try {
+    const stateData = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
+    if (stateData.t) user = verifyToken(stateData.t);
+  } catch(e) {}
+
   const profile = req.cookies?.vm_profile || '';
-  const user = getUser(req);
-  console.log('CALLBACK DEBUG - cookies:', JSON.stringify(req.cookies));
-  console.log('CALLBACK DEBUG - user:', JSON.stringify(user));
 
   try {
     const params = new URLSearchParams();
@@ -144,13 +139,12 @@ app.get('/callback', async (req, res) => {
 
     const { access_token, refresh_token } = tokenRes.data;
 
-    // If user is logged in, save tokens to database
     if (user) {
       await saveWhoopTokens(user.userId, access_token, refresh_token);
       return res.redirect('/insights-stored');
     }
 
-    // Otherwise pass tokens through URL (old flow for non-logged-in users)
+    // Non-logged-in flow
     const headers = { Authorization: 'Bearer ' + access_token };
     const [profileRes, recoveryRes, sleepRes] = await Promise.allSettled([
       axios.get('https://api.prod.whoop.com/developer/v1/user/profile/basic', { headers }),
@@ -172,7 +166,6 @@ app.get('/callback', async (req, res) => {
   }
 });
 
-// Insights from stored tokens (logged in users)
 app.get('/insights-stored', async (req, res) => {
   const user = getUser(req);
   if (!user) return res.redirect('/auth');
@@ -241,7 +234,6 @@ app.get('/insights-stored', async (req, res) => {
   }
 });
 
-// Insights from URL params (non-logged-in users)
 app.get('/insights', async (req, res) => {
   try {
     const whoopData = JSON.parse(Buffer.from(req.query.data, 'base64').toString('utf-8'));
@@ -293,7 +285,6 @@ app.get('/insights', async (req, res) => {
   }
 });
 
-// Analyze workout
 app.post('/analyze-workout', upload.single('file'), async (req, res) => {
   try {
     const whoopData = Buffer.from(req.body.whoopData, 'base64').toString('utf-8');
@@ -324,7 +315,6 @@ app.post('/analyze-workout', upload.single('file'), async (req, res) => {
   }
 });
 
-// Logout
 app.get('/logout', (req, res) => {
   res.clearCookie('vm_token');
   res.redirect('/');
