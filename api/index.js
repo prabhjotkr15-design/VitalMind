@@ -125,6 +125,8 @@ app.get('/callback', async (req, res) => {
   if (!code) return res.status(400).send('No code received from WHOOP');
   const profile = req.cookies?.vm_profile || '';
   const user = getUser(req);
+  console.log('CALLBACK DEBUG - cookies:', JSON.stringify(req.cookies));
+  console.log('CALLBACK DEBUG - user:', JSON.stringify(user));
 
   try {
     const params = new URLSearchParams();
