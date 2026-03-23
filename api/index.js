@@ -339,7 +339,7 @@ app.post('/api/auth/request-reset', async (req, res) => {
     }, { headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' } });
     res.json({ ok: true });
   } catch(e) {
-    console.error('Reset error:', e.message);
+    console.error('Reset error:', e.message, e.response?.data || '');
     res.json({ ok: true });
   }
 });
