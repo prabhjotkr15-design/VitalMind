@@ -18,7 +18,7 @@ const REDIRECT_URI = process.env.REDIRECT_URI;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const SCOPE = 'read:recovery read:sleep read:workout read:body_measurement read:profile offline';
 
-app.get('/', (req, res) => res.send(readFileSync(__dirname + '/pages/home.html', 'utf-8')));
+app.get('/', (req, res) => res.send(readFileSync(new URL('./pages/', import.meta.url).pathname + 'home.html', 'utf-8')));
 
 app.get('/login', (req, res) => {
   const state = Math.random().toString(36).substring(2, 12);
@@ -66,7 +66,7 @@ app.get('/callback', async (req, res) => {
 });
 
 app.get('/onboarding', (req, res) => {
-  const html = readFileSync(__dirname + '/pages/onboarding.html', 'utf-8');
+  const html = readFileSync(new URL('./pages/', import.meta.url).pathname + 'onboarding.html', 'utf-8');
   const whoopData = req.query.data || '';
   res.send(html.replace('__WHOOP_DATA__', whoopData));
 });
@@ -95,7 +95,7 @@ app.get('/insights', async (req, res) => {
     const insight = claudeRes.data.content[0].text;
     const whoopEncoded = Buffer.from(JSON.stringify(whoopData)).toString('base64');
     const profileEncoded = Buffer.from(JSON.stringify(userProfile)).toString('base64');
-    let html = readFileSync(__dirname + '/pages/insights.html', 'utf-8');
+    let html = readFileSync(new URL('./pages/', import.meta.url).pathname + 'insights.html', 'utf-8');
     html = html
       .replace(/__FIRST_NAME__/g, firstName)
       .replace(/__RECOVERY__/g, latestRecovery ?? '--')
