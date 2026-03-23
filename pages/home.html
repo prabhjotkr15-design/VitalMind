@@ -16,15 +16,48 @@
     nav{position:fixed;top:0;left:0;right:0;padding:20px 48px;display:flex;align-items:center;justify-content:space-between;z-index:100;background:linear-gradient(to bottom,rgba(7,9,15,0.8),transparent)}
     .nav-logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--accent)}
     .nav-badge{font-size:11px;color:var(--muted2);letter-spacing:.15em;text-transform:uppercase;border:1px solid var(--border);padding:6px 14px;border-radius:100px}
-    .hero{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:120px 24px 80px;text-align:center}
+
+    /* SCREEN 1: Hero */
+    .screen{display:none;position:relative;z-index:1;min-height:100vh;flex-direction:column;align-items:center;justify-content:center;padding:100px 24px 60px;text-align:center}
+    .screen.active{display:flex}
     .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent2);margin-bottom:32px;opacity:0;animation:fadeUp .8s ease .1s forwards}
     .hero-eyebrow::before,.hero-eyebrow::after{content:'';display:block;width:32px;height:1px;background:var(--accent2);opacity:.5}
     h1{font-family:'Playfair Display',serif;font-size:clamp(48px,7vw,88px);font-weight:800;line-height:1.05;margin-bottom:24px;opacity:0;animation:fadeUp .8s ease .2s forwards;max-width:800px}
     h1 em{font-style:italic;color:var(--accent)}
-    .hero-sub{font-size:18px;color:var(--muted2);line-height:1.7;max-width:480px;margin:0 auto 64px;font-weight:300;opacity:0;animation:fadeUp .8s ease .3s forwards}
-    .picker-label{font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:20px;opacity:0;animation:fadeUp .8s ease .4s forwards}
-    .wearable-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:620px;width:100%;margin:0 auto 32px;opacity:0;animation:fadeUp .8s ease .5s forwards}
-    .wearable-card{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:24px 16px;cursor:pointer;transition:all .25s ease;position:relative;overflow:hidden;user-select:none;text-align:center}
+    .hero-sub{font-size:18px;color:var(--muted2);line-height:1.7;max-width:480px;margin:0 auto 48px;font-weight:300;opacity:0;animation:fadeUp .8s ease .3s forwards}
+    .start-btn{display:inline-flex;align-items:center;gap:10px;padding:18px 40px;background:var(--accent);color:#07090f;font-family:'DM Sans',sans-serif;font-weight:600;font-size:15px;border:none;border-radius:100px;cursor:pointer;transition:all .25s;box-shadow:0 0 40px rgba(232,213,163,.2);opacity:0;animation:fadeUp .8s ease .4s forwards}
+    .start-btn:hover{background:var(--accent2);transform:translateY(-2px)}
+
+    /* SCREEN 2: Onboarding */
+    .onboarding{max-width:560px;width:100%}
+    .progress{display:flex;gap:6px;margin-bottom:48px;justify-content:center}
+    .progress-dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:all .3s}
+    .progress-dot.active{background:var(--accent);width:24px;border-radius:3px}
+    .progress-dot.done{background:var(--accent2)}
+    .step{display:none;animation:fadeUp .4s ease forwards}
+    .step.active{display:block}
+    .step-eyebrow{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent2);margin-bottom:16px}
+    .step-title{font-family:'Playfair Display',serif;font-size:clamp(26px,4vw,36px);font-weight:700;line-height:1.15;margin-bottom:8px}
+    .step-title em{font-style:italic;color:var(--accent)}
+    .step-sub{color:var(--muted2);font-size:15px;margin-bottom:32px;font-weight:300}
+    .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:28px}
+    .cards.three{grid-template-columns:repeat(3,1fr)}
+    .card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:20px 16px;cursor:pointer;transition:all .2s;text-align:center;user-select:none}
+    .card:hover{border-color:var(--muted);transform:translateY(-1px)}
+    .card.selected{border-color:var(--accent);background:rgba(232,213,163,0.05);box-shadow:0 0 20px rgba(232,213,163,0.08)}
+    .card-icon{font-size:26px;margin-bottom:8px;display:block}
+    .card-label{font-size:14px;font-weight:500;margin-bottom:3px}
+    .card-desc{font-size:11px;color:var(--muted)}
+    .multi-note{font-size:12px;color:var(--muted);text-align:center;margin-bottom:20px}
+    .next-btn{width:100%;padding:15px;background:var(--accent);color:#07090f;font-family:'DM Sans',sans-serif;font-weight:600;font-size:15px;border:none;border-radius:12px;cursor:pointer;transition:all .2s}
+    .next-btn:hover{background:var(--accent2);transform:translateY(-1px)}
+    .skip{display:block;text-align:center;margin-top:12px;font-size:13px;color:var(--muted);cursor:pointer;transition:color .2s}
+    .skip:hover{color:var(--muted2)}
+
+    /* SCREEN 3: Wearable picker */
+    .picker-label{font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:20px}
+    .wearable-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:620px;width:100%;margin:0 auto 32px}
+    .wearable-card{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:24px 16px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden;user-select:none;text-align:center}
     .wearable-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .25s}
     .wearable-card.whoop::before{background:radial-gradient(circle at 50% 0%,rgba(232,213,163,0.08),transparent 70%)}
     .wearable-card.oura::before{background:radial-gradient(circle at 50% 0%,rgba(167,139,250,0.08),transparent 70%)}
@@ -42,16 +75,11 @@
     .wearable-card.selected.whoop .wearable-check{background:var(--accent);border-color:var(--accent);color:#07090f}
     .wearable-card.selected.oura .wearable-check{background:var(--oura);border-color:var(--oura);color:#07090f}
     .coming-soon{position:absolute;top:10px;right:10px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border);padding:3px 8px;border-radius:100px;color:var(--muted)}
-    .cta-wrap{opacity:0;animation:fadeUp .8s ease .6s forwards}
-    .connect-btn{display:inline-flex;align-items:center;gap:10px;padding:18px 40px;background:var(--accent);color:#07090f;font-family:'DM Sans',sans-serif;font-weight:600;font-size:15px;text-decoration:none;border-radius:100px;border:none;cursor:pointer;transition:all .25s ease;box-shadow:0 0 40px rgba(232,213,163,.2)}
-    .connect-btn:hover{background:var(--accent2);transform:translateY(-2px);box-shadow:0 0 60px rgba(232,213,163,.35)}
-    .stats-bar{display:flex;justify-content:center;margin-top:80px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);opacity:0;animation:fadeUp .8s ease .7s forwards}
-    .stat{padding:28px 40px;text-align:center;border-right:1px solid var(--border);flex:1;max-width:200px}
-    .stat:last-child{border-right:none}
-    .stat-value{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:var(--accent);display:block}
-    .stat-label{font-size:12px;color:var(--muted);margin-top:4px}
+    .connect-btn{display:inline-flex;align-items:center;gap:10px;padding:18px 40px;background:var(--accent);color:#07090f;font-family:'DM Sans',sans-serif;font-weight:600;font-size:15px;border:none;border-radius:100px;cursor:pointer;transition:all .25s;box-shadow:0 0 40px rgba(232,213,163,.2)}
+    .connect-btn:hover{background:var(--accent2);transform:translateY(-2px)}
+
     @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
-    @media(max-width:600px){nav{padding:16px 20px}.wearable-grid{grid-template-columns:1fr;max-width:320px}.stats-bar{flex-wrap:wrap}.stat{border-right:none;border-bottom:1px solid var(--border);max-width:100%;width:100%}.stat:last-child{border-bottom:none}}
+    @media(max-width:600px){nav{padding:16px 20px}.wearable-grid{grid-template-columns:1fr;max-width:320px}}
   </style>
 </head>
 <body>
@@ -61,11 +89,74 @@
     <div class="nav-logo">VitalMind</div>
     <div class="nav-badge">Early Access</div>
   </nav>
-  <div class="hero">
+
+  <!-- Screen 1: Hero -->
+  <div class="screen active" id="screen1">
     <div class="hero-eyebrow">AI Health Intelligence</div>
     <h1>Your body is<br/>talking. <em>Listen.</em></h1>
     <p class="hero-sub">Connect your wearable and get AI-powered insights that cross-reference sleep, recovery, and activity — telling you exactly what's going wrong and what to do about it.</p>
-    <div class="picker-label">Choose your wearable to get started</div>
+    <button class="start-btn" onclick="showScreen(2)">
+      Get started →
+    </button>
+  </div>
+
+  <!-- Screen 2: Onboarding -->
+  <div class="screen" id="screen2">
+    <div class="onboarding">
+      <div class="progress">
+        <div class="progress-dot active" id="dot0"></div>
+        <div class="progress-dot" id="dot1"></div>
+        <div class="progress-dot" id="dot2"></div>
+      </div>
+      <div class="step active" id="step0">
+        <div class="step-eyebrow">Step 1 of 3</div>
+        <div class="step-title">What's your <em>main goal</em>?</div>
+        <div class="step-sub">We'll tailor every insight to what matters most to you.</div>
+        <div class="cards" id="goals">
+          <div class="card selected" data-value="better_sleep" onclick="selectCard(this,'goals')"><span class="card-icon">😴</span><div class="card-label">Better Sleep</div><div class="card-desc">Improve quality & duration</div></div>
+          <div class="card" data-value="more_energy" onclick="selectCard(this,'goals')"><span class="card-icon">⚡</span><div class="card-label">More Energy</div><div class="card-desc">Beat fatigue & brain fog</div></div>
+          <div class="card" data-value="lose_weight" onclick="selectCard(this,'goals')"><span class="card-icon">🔥</span><div class="card-label">Lose Weight</div><div class="card-desc">Smart deficit approach</div></div>
+          <div class="card" data-value="peak_performance" onclick="selectCard(this,'goals')"><span class="card-icon">🏆</span><div class="card-label">Peak Performance</div><div class="card-desc">Train harder, recover faster</div></div>
+        </div>
+        <button class="next-btn" onclick="nextStep()">Continue →</button>
+      </div>
+      <div class="step" id="step1">
+        <div class="step-eyebrow">Step 2 of 3</div>
+        <div class="step-title">Anything about <em>your body</em>?</div>
+        <div class="step-sub">Helps VitalMind give you safer, smarter recommendations.</div>
+        <div class="multi-note">Select all that apply</div>
+        <div class="cards three" id="conditions">
+          <div class="card" data-value="endometriosis" onclick="toggleCard(this)"><span class="card-icon">🌸</span><div class="card-label">Endometriosis</div></div>
+          <div class="card" data-value="pcos" onclick="toggleCard(this)"><span class="card-icon">⚖️</span><div class="card-label">PCOS</div></div>
+          <div class="card" data-value="thyroid" onclick="toggleCard(this)"><span class="card-icon">🦋</span><div class="card-label">Thyroid</div></div>
+          <div class="card" data-value="high_stress" onclick="toggleCard(this)"><span class="card-icon">🧠</span><div class="card-label">High Stress</div></div>
+          <div class="card" data-value="chronic_fatigue" onclick="toggleCard(this)"><span class="card-icon">😓</span><div class="card-label">Chronic Fatigue</div></div>
+          <div class="card" data-value="none" onclick="toggleCard(this)"><span class="card-icon">✨</span><div class="card-label">None</div></div>
+        </div>
+        <button class="next-btn" onclick="nextStep()">Continue →</button>
+        <span class="skip" onclick="nextStep()">Skip</span>
+      </div>
+      <div class="step" id="step2">
+        <div class="step-eyebrow">Step 3 of 3</div>
+        <div class="step-title">Any <em>dietary approach</em>?</div>
+        <div class="step-sub">Last one — we promise.</div>
+        <div class="cards three" id="diet">
+          <div class="card" data-value="fodmap" onclick="toggleCard(this)"><span class="card-icon">🥗</span><div class="card-label">FODMAP</div></div>
+          <div class="card" data-value="vegan" onclick="toggleCard(this)"><span class="card-icon">🌱</span><div class="card-label">Vegan</div></div>
+          <div class="card" data-value="keto" onclick="toggleCard(this)"><span class="card-icon">🥑</span><div class="card-label">Keto</div></div>
+          <div class="card" data-value="intermittent_fasting" onclick="toggleCard(this)"><span class="card-icon">⏱️</span><div class="card-label">Int. Fasting</div></div>
+          <div class="card" data-value="anti_inflammatory" onclick="toggleCard(this)"><span class="card-icon">🫚</span><div class="card-label">Anti-inflammatory</div></div>
+          <div class="card" data-value="none" onclick="toggleCard(this)"><span class="card-icon">🍽️</span><div class="card-label">No restrictions</div></div>
+        </div>
+        <button class="next-btn" onclick="goToWearable()">Continue →</button>
+        <span class="skip" onclick="goToWearable()">Skip</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 3: Wearable picker -->
+  <div class="screen" id="screen3">
+    <div class="picker-label">Almost there — choose your wearable</div>
     <div class="wearable-grid">
       <div class="wearable-card whoop selected" onclick="selectWearable('whoop',this)">
         <div class="wearable-check">✓</div>
@@ -86,30 +177,59 @@
         <div class="wearable-desc">Coming soon</div>
       </div>
     </div>
-    <div class="cta-wrap">
-      <button class="connect-btn" id="connectBtn" onclick="handleConnect()">
-        Connect your WHOOP →
-      </button>
-    </div>
-    <div class="stats-bar">
-      <div class="stat"><span class="stat-value">7</span><div class="stat-label">Days analyzed</div></div>
-      <div class="stat"><span class="stat-value">4</span><div class="stat-label">Data sources</div></div>
-      <div class="stat"><span class="stat-value">AI</span><div class="stat-label">Powered insights</div></div>
-      <div class="stat"><span class="stat-value">0</span><div class="stat-label">Apps to install</div></div>
-    </div>
+    <button class="connect-btn" id="connectBtn" onclick="handleConnect()">
+      Connect your WHOOP →
+    </button>
   </div>
+
   <script>
-    let selected='whoop';
+    let currentStep=0;
+    let selectedWearable='whoop';
+    const profile={goal:'better_sleep',conditions:[],diet:[]};
+
+    function showScreen(n){
+      document.querySelectorAll('.screen').forEach((s,i)=>s.classList.toggle('active',i===n-1));
+      window.scrollTo(0,0);
+    }
+
+    function selectCard(el,groupId){
+      document.querySelectorAll('#'+groupId+' .card').forEach(c=>c.classList.remove('selected'));
+      el.classList.add('selected');
+      if(groupId==='goals')profile.goal=el.dataset.value;
+    }
+
+    function toggleCard(el){
+      const value=el.dataset.value;
+      if(value==='none'){el.closest('.cards').querySelectorAll('.card').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');return;}
+      el.closest('.cards').querySelector('[data-value="none"]')?.classList.remove('selected');
+      el.classList.toggle('selected');
+    }
+
+    function nextStep(){
+      if(currentStep===1)profile.conditions=[...document.querySelectorAll('#conditions .card.selected')].map(c=>c.dataset.value);
+      currentStep++;
+      document.querySelectorAll('.step').forEach((s,i)=>s.classList.toggle('active',i===currentStep));
+      document.querySelectorAll('.progress-dot').forEach((d,i)=>{d.classList.toggle('active',i===currentStep);d.classList.toggle('done',i<currentStep);});
+    }
+
+    function goToWearable(){
+      profile.diet=[...document.querySelectorAll('#diet .card.selected')].map(c=>c.dataset.value);
+      localStorage.setItem('vitalProfile', JSON.stringify(profile));
+      showScreen(3);
+    }
+
     function selectWearable(type,el){
       document.querySelectorAll('.wearable-card:not(.disabled)').forEach(c=>{c.classList.remove('selected');c.querySelector('.wearable-check').textContent='';});
-      el.classList.add('selected');el.querySelector('.wearable-check').textContent='✓';selected=type;
+      el.classList.add('selected');el.querySelector('.wearable-check').textContent='✓';
+      selectedWearable=type;
       const btn=document.getElementById('connectBtn');
-      if(type==='whoop'){btn.textContent='Connect your WHOOP →';btn.style.background='';}
-      if(type==='oura'){btn.textContent='Connect Oura Ring →';btn.style.background='#a78bfa';}
+      btn.textContent=type==='whoop'?'Connect your WHOOP →':'Connect Oura Ring →';
+      btn.style.background=type==='oura'?'#a78bfa':'';
     }
+
     function handleConnect(){
-      if(selected==='whoop')window.location.href='/login';
-      if(selected==='oura')alert('Oura Ring support coming very soon!');
+      if(selectedWearable==='oura'){alert('Oura Ring support coming very soon!');return;}
+      window.location.href='/login';
     }
   </script>
 </body>

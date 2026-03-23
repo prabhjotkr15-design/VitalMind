@@ -34,12 +34,13 @@ app.get('/login', (req, res) => {
   url.searchParams.set('client_id', CLIENT_ID);
   url.searchParams.set('redirect_uri', REDIRECT_URI);
   url.searchParams.set('scope', SCOPE);
-  url.searchParams.set('state', state);
+  url.searchParams.set('state', state + (req.query.profile ? '_' + req.query.profile : ''));
   res.redirect(url.toString());
 });
 
 app.get('/callback', async (req, res) => {
-  const { code } = req.query;
+  const { code, state } = req.query;
+  const profileFromState = state const { code } = req.query;const { code } = req.query; state.includes('_') ? state.split('_').slice(1).join('_') : '';
   if (!code) return res.status(400).send('No code received from WHOOP');
   try {
     const params = new URLSearchParams();
