@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VitalMind — Insights</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#07090f;--surface:#0d1117;--border:#1c2535;--accent:#e8d5a3;--accent2:#c9a96e;--text:#f0f4ff;--muted:#5a6a85;--muted2:#8a9ab8;--green:#4ade80;--yellow:#f59e0b;--red:#ef4444}
+    body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+    .orb{position:fixed;border-radius:50%;pointer-events:none}
+    .orb1{width:500px;height:500px;background:radial-gradient(circle,rgba(232,213,163,0.05) 0%,transparent 70%);top:-100px;right:-100px}
+    .orb2{width:400px;height:400px;background:radial-gradient(circle,rgba(167,139,250,0.04) 0%,transparent 70%);bottom:0;left:-100px}
+    .header{border-bottom:1px solid var(--border);padding:18px 40px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(7,9,15,0.9);backdrop-filter:blur(12px);z-index:10}
+    .logo{font-family:'Playfair Display',serif;font-weight:700;font-size:20px;color:var(--accent)}
+    .header-right{display:flex;gap:10px;align-items:center}
+    .pill{font-size:11px;color:var(--muted2);border:1px solid var(--border);padding:5px 12px;border-radius:100px}
+    .refresh-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;text-decoration:none;border-radius:100px;transition:border-color .2s}
+    .refresh-btn:hover{border-color:var(--accent);color:var(--accent)}
+    .main{max-width:900px;margin:0 auto;padding:48px 24px 80px;position:relative;z-index:1}
+    .greeting{font-family:'Playfair Display',serif;font-size:clamp(28px,4vw,40px);font-weight:700;margin-bottom:6px}
+    .greeting em{font-style:italic;color:var(--accent)}
+    .subgreeting{color:var(--muted2);font-size:14px;margin-bottom:24px}
+    .profile-pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:36px}
+    .profile-pill{font-size:11px;padding:5px 12px;border-radius:100px;border:1px solid var(--border);color:var(--muted2);background:var(--surface);letter-spacing:.03em;text-transform:capitalize}
+    .profile-pill.goal{border-color:var(--accent2);color:var(--accent2)}
+    .metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:32px}
+    .metric-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;transition:border-color .2s,transform .2s}
+    .metric-card:hover{border-color:var(--accent2);transform:translateY(-2px)}
+    .metric-label{font-size:11px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px}
+    .metric-value{font-family:'Playfair Display',serif;font-size:44px;font-weight:700;line-height:1}
+    .metric-unit{font-size:13px;color:var(--muted2);margin-top:8px}
+    .high{color:var(--green)}.mid{color:var(--yellow)}.low{color:var(--red)}
+    .insight-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:40px;margin-bottom:28px}
+    .insight-card h2{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin:28px 0 12px;color:var(--accent)}
+    .insight-card h2:first-child{margin-top:0}
+    .insight-card h3{font-size:15px;font-weight:600;margin:20px 0 8px}
+    .insight-card p{color:var(--muted2);line-height:1.75;margin-bottom:12px;font-size:15px}
+    .insight-card ul{padding-left:20px}
+    .insight-card li{color:var(--muted2);line-height:1.75;margin-bottom:8px;font-size:15px}
+    .insight-card strong{color:var(--text)}
+    .insight-card table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+    .insight-card th{text-align:left;padding:10px 14px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--border);font-size:12px;letter-spacing:.05em}
+    .insight-card td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--muted2)}
+    .workout-section{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px}
+    .section-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;margin-bottom:6px}
+    .section-sub{color:var(--muted2);font-size:14px;margin-bottom:28px;line-height:1.6}
+    .tabs{display:flex;gap:6px;margin-bottom:24px;background:var(--bg);border-radius:12px;padding:4px}
+    .tab{flex:1;padding:11px;text-align:center;border-radius:9px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);border:none;background:transparent;transition:all .2s;font-family:'DM Sans',sans-serif}
+    .tab.active{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+    .tab-icon{display:block;font-size:18px;margin-bottom:3px}
+    .tab-panel{display:none}.tab-panel.active{display:block}
+    .upload-zone{border:1.5px dashed var(--border);border-radius:12px;padding:36px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+    .upload-zone:hover{border-color:var(--accent2);background:rgba(232,213,163,0.02)}
+    .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+    .upload-icon{font-size:28px;margin-bottom:10px}
+    .upload-text{color:var(--muted);font-size:13px}
+    .upload-text strong{color:var(--accent2)}
+    .text-input{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:16px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.6;resize:vertical;min-height:140px;transition:border-color .2s}
+    .text-input:focus{outline:none;border-color:var(--accent2)}
+    .text-input::placeholder{color:var(--muted)}
+    .file-name{margin-top:10px;font-size:12px;color:var(--muted);min-height:18px}
+    .analyze-btn{margin-top:18px;padding:14px;background:var(--accent);color:#07090f;font-family:'DM Sans',sans-serif;font-weight:600;font-size:14px;border:none;border-radius:12px;cursor:pointer;transition:all .2s;width:100%}
+    .analyze-btn:hover{background:var(--accent2)}
+    .analyze-btn:disabled{opacity:.4;cursor:not-allowed}
+    .workout-result{margin-top:24px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:24px;display:none}
+    .workout-result.visible{display:block}
+    .workout-result h2{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin:16px 0 8px;color:var(--accent)}
+    .workout-result h2:first-child{margin-top:0}
+    .workout-result h3{font-size:15px;font-weight:600;margin:14px 0 6px}
+    .workout-result p,.workout-result li{color:var(--muted2);line-height:1.7;margin-bottom:8px;font-size:14px}
+    .workout-result ul{padding-left:18px}
+    .workout-result strong{color:var(--text)}
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(7,9,15,0.3);border-top-color:#07090f;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @media(max-width:600px){.metrics-grid{grid-template-columns:1fr}.header{padding:14px 18px}.main{padding:28px 16px 60px}}
+  </style>
+</head>
+<body>
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="header">
+    <div class="logo">VitalMind</div>
+    <div class="header-right">
+      <div class="pill">WHOOP Connected</div>
+      <a href="/login" class="refresh-btn">↻ Refresh</a>
+    </div>
+  </div>
+  <div class="main">
+    <div class="greeting">Hey, <em>__FIRST_NAME__.</em></div>
+    <div class="subgreeting">Here's your personalized health analysis for the past 7 days</div>
+    <div class="profile-pills" id="profilePills"></div>
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Today's Recovery</div>
+        <div class="metric-value __RECOVERY_CLASS__">__RECOVERY__%</div>
+        <div class="metric-unit">__RECOVERY_LABEL__</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">HRV (RMSSD)</div>
+        <div class="metric-value" style="color:var(--accent)">__HRV__</div>
+        <div class="metric-unit">milliseconds</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Resting Heart Rate</div>
+        <div class="metric-value" style="color:var(--accent2)">__RHR__</div>
+        <div class="metric-unit">beats per minute</div>
+      </div>
+    </div>
+    <div class="insight-card">__INSIGHT__</div>
+    <div class="workout-section">
+      <div class="section-title">Cross-reference your workout plan</div>
+      <div class="section-sub">Share your plan any way — Claude will tell you whether to push, modify, or rest today based on your biometrics.</div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('photo',event)"><span class="tab-icon">📸</span>Photo</button>
+        <button class="tab" onclick="switchTab('text',event)"><span class="tab-icon">💬</span>Type it</button>
+        <button class="tab" onclick="switchTab('file',event)"><span class="tab-icon">📄</span>File</button>
+      </div>
+      <div class="tab-panel active" id="tab-photo">
+        <div class="upload-zone">
+          <input type="file" id="photoInput" accept="image/*" onchange="handlePhoto(this)"/>
+          <div class="upload-icon">📸</div>
+          <div class="upload-text"><strong>Upload a photo</strong> of your workout plan<br/>Screenshot, handwritten, whiteboard — anything works</div>
+        </div>
+        <div class="file-name" id="photoName"></div>
+        <button class="analyze-btn" id="photoBtn" onclick="analyze('photo')" disabled>Analyze with my data →</button>
+      </div>
+      <div class="tab-panel" id="tab-text">
+        <textarea class="text-input" id="textInput" placeholder="e.g. Monday: Lower body — squats, lunges, hip thrusts. Tuesday: Low impact cardio 30 min..."></textarea>
+        <button class="analyze-btn" onclick="analyze('text')">Analyze with my data →</button>
+      </div>
+      <div class="tab-panel" id="tab-file">
+        <div class="upload-zone">
+          <input type="file" id="fileInput" accept=".pdf,.doc,.docx" onchange="handleFile(this)"/>
+          <div class="upload-icon">📄</div>
+          <div class="upload-text"><strong>Upload your plan</strong><br/>PDF or Word document</div>
+        </div>
+        <div class="file-name" id="fileName"></div>
+        <button class="analyze-btn" id="fileBtn" onclick="analyze('file')" disabled>Analyze with my data →</button>
+      </div>
+      <div class="workout-result" id="workoutResult"></div>
+    </div>
+  </div>
+  <script>
+    const WHOOP_DATA='__WHOOP_DATA__';
+    const USER_PROFILE='__PROFILE_DATA__';
+    const GOAL_TEXT='__GOAL_TEXT__';
+    let photoFile=null,docFile=null;
+
+    // Render profile pills
+    try {
+      const p=JSON.parse(atob(USER_PROFILE));
+      const pills=document.getElementById('profilePills');
+      if(p.goal)pills.innerHTML+=`<div class="profile-pill goal">Goal: ${GOAL_TEXT}</div>`;
+      (p.conditions||[]).filter(c=>c!=='none').forEach(c=>pills.innerHTML+=`<div class="profile-pill">${c.replace(/_/g,' ')}</div>`);
+      (p.diet||[]).filter(d=>d!=='none').forEach(d=>pills.innerHTML+=`<div class="profile-pill">${d.replace(/_/g,' ')}</div>`);
+    } catch(e){}
+
+    function switchTab(tab,e){
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+      e.target.closest('.tab').classList.add('active');
+      document.getElementById('tab-'+tab).classList.add('active');
+      document.getElementById('workoutResult').classList.remove('visible');
+    }
+    function handlePhoto(input){photoFile=input.files[0];if(photoFile){document.getElementById('photoName').textContent='📎 '+photoFile.name;document.getElementById('photoBtn').disabled=false;}}
+    function handleFile(input){docFile=input.files[0];if(docFile){document.getElementById('fileName').textContent='📎 '+docFile.name;document.getElementById('fileBtn').disabled=false;}}
+    async function analyze(type){
+      const result=document.getElementById('workoutResult');
+      const btn=type==='photo'?document.getElementById('photoBtn'):type==='file'?document.getElementById('fileBtn'):event.target;
+      btn.innerHTML='<span class="spinner"></span>Analyzing...';btn.disabled=true;
+      result.classList.remove('visible');
+      try{
+        let options={};
+        if(type==='text'){
+          const text=document.getElementById('textInput').value.trim();
+          if(!text){btn.innerHTML='Analyze with my data →';btn.disabled=false;return;}
+          options={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'text',content:text,whoopData:WHOOP_DATA,userProfile:USER_PROFILE})};
+        } else {
+          const formData=new FormData();
+          formData.append('whoopData',WHOOP_DATA);
+          formData.append('userProfile',USER_PROFILE);
+          formData.append('type',type);
+          formData.append('file',type==='photo'?photoFile:docFile);
+          options={method:'POST',body:formData};
+        }
+        const res=await fetch('/analyze-workout',options);
+        const data=await res.json();
+        result.innerHTML=data.insight;result.classList.add('visible');
+      } catch(e){result.innerHTML='<p>Something went wrong. Please try again.</p>';result.classList.add('visible');}
+      btn.innerHTML='Analyze with my data →';btn.disabled=false;
+    }
+  </script>
+</body>
+</html>
