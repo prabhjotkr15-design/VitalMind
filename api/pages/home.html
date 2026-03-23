@@ -3,232 +3,495 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>VitalMind — Know your body</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <title>VitalMind — Option B: Warm</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{--bg:#07090f;--surface:#0d1117;--border:#1c2535;--accent:#e8d5a3;--accent2:#c9a96e;--text:#f0f4ff;--muted:#5a6a85;--muted2:#8a9ab8;--oura:#a78bfa}
-    body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
-    body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(232,213,163,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(232,213,163,0.03) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;z-index:0}
-    .orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
-    .orb1{width:700px;height:700px;background:radial-gradient(circle,rgba(232,213,163,0.06) 0%,transparent 70%);top:-200px;right:-200px}
-    .orb2{width:500px;height:500px;background:radial-gradient(circle,rgba(167,139,250,0.05) 0%,transparent 70%);bottom:-100px;left:-100px}
-    nav{position:fixed;top:0;left:0;right:0;padding:20px 48px;display:flex;align-items:center;justify-content:space-between;z-index:100;background:linear-gradient(to bottom,rgba(7,9,15,0.8),transparent)}
-    .nav-logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--accent)}
-    .nav-badge{font-size:11px;color:var(--muted2);letter-spacing:.15em;text-transform:uppercase;border:1px solid var(--border);padding:6px 14px;border-radius:100px}
-    .hero{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:120px 24px 80px;text-align:center}
-    .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent2);margin-bottom:32px;opacity:0;animation:fadeUp .8s ease .1s forwards}
-    .hero-eyebrow::before,.hero-eyebrow::after{content:'';display:block;width:32px;height:1px;background:var(--accent2);opacity:.5}
-    h1{font-family:'Playfair Display',serif;font-size:clamp(48px,7vw,88px);font-weight:800;line-height:1.05;margin-bottom:24px;opacity:0;animation:fadeUp .8s ease .2s forwards;max-width:800px}
-    h1 em{font-style:italic;color:var(--accent)}
-    .hero-sub{font-size:18px;color:var(--muted2);line-height:1.7;max-width:480px;margin:0 auto 48px;font-weight:300;opacity:0;animation:fadeUp .8s ease .3s forwards}
-    .picker-label{font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:20px;opacity:0;animation:fadeUp .8s ease .4s forwards}
-    .wearable-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:620px;width:100%;margin:0 auto 32px;opacity:0;animation:fadeUp .8s ease .5s forwards}
-    .wearable-card{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:24px 16px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden;user-select:none;text-align:center}
-    .wearable-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .25s}
-    .wearable-card.whoop::before{background:radial-gradient(circle at 50% 0%,rgba(232,213,163,0.08),transparent 70%)}
-    .wearable-card.oura::before{background:radial-gradient(circle at 50% 0%,rgba(167,139,250,0.08),transparent 70%)}
-    .wearable-card:hover{border-color:var(--muted);transform:translateY(-2px)}
-    .wearable-card:hover::before{opacity:1}
-    .wearable-card.selected.whoop{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 0 24px rgba(232,213,163,.15)}
-    .wearable-card.selected.oura{border-color:var(--oura);box-shadow:0 0 0 1px var(--oura),0 0 24px rgba(167,139,250,.15)}
-    .wearable-card.selected::before{opacity:1}
-    .wearable-card.disabled{opacity:.35;cursor:not-allowed}
-    .wearable-card.disabled:hover{transform:none;border-color:var(--border)}
-    .wearable-icon{font-size:32px;margin-bottom:12px;display:block}
-    .wearable-name{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;margin-bottom:4px}
-    .wearable-desc{font-size:11px;color:var(--muted)}
-    .wearable-check{position:absolute;top:12px;right:12px;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .2s}
-    .wearable-card.selected.whoop .wearable-check{background:var(--accent);border-color:var(--accent);color:#07090f}
-    .wearable-card.selected.oura .wearable-check{background:var(--oura);border-color:var(--oura);color:#07090f}
-    .coming-soon{position:absolute;top:10px;right:10px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border);padding:3px 8px;border-radius:100px;color:var(--muted)}
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0c0a0b;
+      --surface: #141112;
+      --surface2: #1c1819;
+      --border: rgba(255,235,225,0.06);
+      --border-h: rgba(255,235,225,0.12);
+      --accent: #e09070;
+      --accent-dim: #b06848;
+      --accent-glow: rgba(224,144,112,0.1);
+      --accent-bright: #f0a888;
+      --warm: #d4a87a;
+      --warm-dim: #a07850;
+      --blush: #d4849c;
+      --text: #f0ece8;
+      --text-dim: rgba(240,236,232,0.5);
+      --text-xdim: rgba(240,236,232,0.28);
+      --oura: #a48bf5;
+      --apple: #59d4a8;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-weight: 300;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    .grain {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.3;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    }
 
-    /* CTA area */
-    .cta-wrap{opacity:0;animation:fadeUp .8s ease .6s forwards;display:flex;flex-direction:column;align-items:center;gap:14px}
-    .connect-btn{display:inline-flex;align-items:center;gap:10px;padding:18px 40px;background:var(--accent);color:#07090f;font-family:'DM Sans',sans-serif;font-weight:600;font-size:15px;border:none;border-radius:100px;cursor:pointer;transition:all .25s;box-shadow:0 0 40px rgba(232,213,163,.2)}
-    .connect-btn:hover{background:var(--accent2);transform:translateY(-2px)}
-    .personalize-link{font-size:13px;color:var(--muted);cursor:pointer;transition:color .2s;display:inline-flex;align-items:center;gap:6px;border:none;background:none;font-family:'DM Sans',sans-serif}
-    .personalize-link:hover{color:var(--accent)}
-    .personalize-link .dot{width:6px;height:6px;border-radius:50%;background:var(--accent2);display:inline-block}
-    .profile-saved{font-size:12px;color:var(--accent2);display:none;align-items:center;gap:6px}
-    .profile-saved.visible{display:inline-flex}
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 22px 48px;
+      display: flex; align-items: center; justify-content: space-between;
+      background: linear-gradient(to bottom, var(--bg), transparent);
+    }
+    .nav-logo {
+      font-family: 'Instrument Serif', serif;
+      font-size: 24px; color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+    .nav-right { display: flex; align-items: center; gap: 24px; }
+    .nav-link {
+      font-size: 13px; color: var(--text-dim);
+      text-decoration: none; letter-spacing: 0.04em;
+      transition: color 0.2s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-cta {
+      font-size: 13px; color: var(--bg);
+      background: var(--accent);
+      padding: 9px 22px; border-radius: 100px;
+      text-decoration: none; font-weight: 500;
+      transition: all 0.25s;
+    }
+    .nav-cta:hover { background: var(--accent-bright); transform: translateY(-1px); }
 
-    /* Slide-in panel */
-    .panel-overlay{position:fixed;inset:0;background:rgba(7,9,15,0.7);backdrop-filter:blur(4px);z-index:200;opacity:0;pointer-events:none;transition:opacity .3s}
-    .panel-overlay.open{opacity:1;pointer-events:all}
-    .panel{position:fixed;right:0;top:0;bottom:0;width:420px;max-width:100vw;background:var(--surface);border-left:1px solid var(--border);z-index:201;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);overflow-y:auto;padding:40px 32px}
-    .panel.open{transform:translateX(0)}
-    .panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px}
-    .panel-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:700}
-    .panel-title em{font-style:italic;color:var(--accent)}
-    .panel-close{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--muted2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .2s}
-    .panel-close:hover{border-color:var(--accent);color:var(--accent)}
-    .panel-sub{color:var(--muted2);font-size:14px;margin-bottom:28px;line-height:1.6}
-    .panel-section{margin-bottom:28px}
-    .panel-section-label{font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
-    .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-    .cards.three{grid-template-columns:repeat(3,1fr)}
-    .card{background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:14px 10px;cursor:pointer;transition:all .2s;text-align:center;user-select:none}
-    .card:hover{border-color:var(--muted)}
-    .card.selected{border-color:var(--accent);background:rgba(232,213,163,0.04)}
-    .card-icon{font-size:22px;margin-bottom:6px;display:block}
-    .card-label{font-size:12px;font-weight:500}
-    .save-btn{width:100%;padding:14px;background:var(--accent);color:#07090f;font-family:'DM Sans',sans-serif;font-weight:600;font-size:14px;border:none;border-radius:12px;cursor:pointer;transition:all .2s;margin-top:8px}
-    .save-btn:hover{background:var(--accent2)}
+    .hero {
+      position: relative; z-index: 1;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 140px 24px 80px;
+      text-align: center;
+    }
+    .hero-orb {
+      position: absolute; border-radius: 50%; pointer-events: none; filter: blur(120px);
+    }
+    .orb-1 { width: 600px; height: 600px; background: rgba(224,144,112,0.05); top: -80px; right: -120px; }
+    .orb-2 { width: 450px; height: 450px; background: rgba(212,132,156,0.04); bottom: -40px; left: -100px; }
 
-    @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
-    @media(max-width:600px){nav{padding:16px 20px}.wearable-grid{grid-template-columns:1fr;max-width:320px}.panel{width:100vw}}
+    .hero-ribbon {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 8px 20px; border-radius: 100px;
+      background: rgba(224,144,112,0.08);
+      border: 1px solid rgba(224,144,112,0.15);
+      font-size: 12px; color: var(--accent);
+      letter-spacing: 0.12em; text-transform: uppercase;
+      margin-bottom: 40px;
+      opacity: 0; animation: fadeUp 0.9s cubic-bezier(0.16,1,0.3,1) 0.2s forwards;
+    }
+    .ribbon-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+    h1 {
+      font-family: 'Instrument Serif', serif;
+      font-size: clamp(48px, 7.5vw, 88px);
+      font-weight: 400; line-height: 1.02;
+      letter-spacing: -0.03em;
+      margin-bottom: 28px; max-width: 800px;
+      opacity: 0; animation: fadeUp 0.9s cubic-bezier(0.16,1,0.3,1) 0.35s forwards;
+    }
+    h1 i { font-style: italic; color: var(--accent); }
+    h1 .blush { color: var(--blush); }
+
+    .hero-p {
+      font-size: 18px; color: var(--text-dim);
+      line-height: 1.75; max-width: 520px;
+      margin: 0 auto 52px;
+      opacity: 0; animation: fadeUp 0.9s cubic-bezier(0.16,1,0.3,1) 0.5s forwards;
+    }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 18px 44px;
+      background: var(--accent); color: var(--bg);
+      font-family: 'Outfit', sans-serif; font-weight: 500; font-size: 15px;
+      border: none; border-radius: 100px; cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+      box-shadow: 0 0 60px var(--accent-glow);
+      text-decoration: none;
+    }
+    .btn-primary:hover {
+      background: var(--accent-bright);
+      transform: translateY(-2px);
+      box-shadow: 0 0 80px rgba(224,144,112,0.18);
+    }
+    .btn-primary svg { transition: transform 0.25s; }
+    .btn-primary:hover svg { transform: translateX(3px); }
+    .hero-cta {
+      opacity: 0; animation: fadeUp 0.9s cubic-bezier(0.16,1,0.3,1) 0.65s forwards;
+    }
+
+    .divider {
+      width: 1px; height: 80px;
+      background: linear-gradient(to bottom, transparent, var(--border-h), transparent);
+      margin: 0 auto;
+      opacity: 0; animation: fadeUp 0.9s cubic-bezier(0.16,1,0.3,1) 0.8s forwards;
+    }
+
+    section { position: relative; z-index: 1; }
+
+    .section-label {
+      font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase;
+      color: var(--accent-dim); text-align: center; margin-bottom: 16px;
+    }
+    .section-heading {
+      font-family: 'Instrument Serif', serif;
+      font-size: clamp(32px, 5vw, 48px);
+      font-weight: 400; text-align: center;
+      letter-spacing: -0.02em; margin-bottom: 16px;
+    }
+    .section-heading i { font-style: italic; color: var(--accent); }
+    .section-sub {
+      font-size: 16px; color: var(--text-dim);
+      text-align: center; max-width: 520px;
+      margin: 0 auto; line-height: 1.7;
+    }
+
+    .story {
+      padding: 100px 24px;
+      max-width: 900px; margin: 0 auto;
+    }
+    .story-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 0; margin-top: 64px; position: relative;
+    }
+    .story-grid::before {
+      content: ''; position: absolute;
+      top: 32px; left: 70px; right: 70px;
+      height: 1px;
+      background: linear-gradient(90deg, var(--accent-dim), var(--warm-dim), var(--blush), var(--accent-dim));
+      opacity: 0.3;
+    }
+    .story-step { text-align: center; position: relative; padding: 0 6px; }
+    .story-num {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border-h);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 24px; position: relative; z-index: 1;
+    }
+    .story-num.coral { border-color: rgba(224,144,112,0.2); }
+    .story-num.warm { border-color: rgba(212,168,122,0.2); }
+    .story-num.blush { border-color: rgba(212,132,156,0.2); }
+    .story-num.gold { border-color: rgba(212,168,122,0.25); }
+    .story-title { font-weight: 500; font-size: 15px; margin-bottom: 8px; }
+    .story-desc { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+
+    .connect-section {
+      padding: 80px 24px 100px;
+      max-width: 780px; margin: 0 auto;
+    }
+    .wearable-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 14px; margin-top: 48px;
+    }
+    .w-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px 20px 28px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+      position: relative; overflow: hidden;
+      user-select: none;
+    }
+    .w-card::before {
+      content: ''; position: absolute; inset: 0;
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .w-card.whoop::before { background: radial-gradient(circle at 50% 20%, var(--accent-glow), transparent 70%); }
+    .w-card.oura::before { background: radial-gradient(circle at 50% 20%, rgba(164,139,245,0.08), transparent 70%); }
+    .w-card:not(.off):hover { border-color: var(--border-h); transform: translateY(-3px); }
+    .w-card:not(.off):hover::before { opacity: 1; }
+    .w-card.sel.whoop { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 30px var(--accent-glow); }
+    .w-card.sel.oura { border-color: var(--oura); box-shadow: 0 0 0 1px var(--oura), 0 0 30px rgba(164,139,245,0.15); }
+    .w-card.sel::before { opacity: 1; }
+    .w-card.off { opacity: 0.3; cursor: not-allowed; }
+    .w-card.off:hover { transform: none; border-color: var(--border); }
+    .w-icon { font-size: 36px; margin-bottom: 16px; display: block; position: relative; }
+    .w-name { font-family: 'Instrument Serif', serif; font-size: 18px; margin-bottom: 4px; position: relative; }
+    .w-desc { font-size: 12px; color: var(--text-xdim); position: relative; }
+    .w-check {
+      position: absolute; top: 14px; right: 14px;
+      width: 20px; height: 20px; border-radius: 50%;
+      border: 1.5px solid var(--border-h);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; transition: all 0.25s;
+    }
+    .w-card.sel.whoop .w-check { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+    .w-card.sel.oura .w-check { background: var(--oura); border-color: var(--oura); color: var(--bg); }
+    .w-soon {
+      position: absolute; top: 12px; right: 12px;
+      font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+      background: var(--surface2); border: 1px solid var(--border);
+      padding: 3px 10px; border-radius: 100px; color: var(--text-xdim);
+    }
+    .w-cta-wrap { text-align: center; margin-top: 40px; }
+
+    .features {
+      padding: 100px 24px;
+      max-width: 900px; margin: 0 auto;
+    }
+    .feature-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 16px; margin-top: 56px;
+    }
+    .f-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px 24px;
+      transition: border-color 0.25s, transform 0.25s;
+    }
+    .f-card:hover { border-color: var(--border-h); transform: translateY(-2px); }
+    .f-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: rgba(224,144,112,0.06);
+      border: 1px solid rgba(224,144,112,0.1);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px; font-size: 20px;
+    }
+    .f-title { font-weight: 500; font-size: 15px; margin-bottom: 8px; }
+    .f-desc { font-size: 13px; color: var(--text-dim); line-height: 1.65; }
+
+    .bottom-cta {
+      padding: 120px 24px;
+      text-align: center; position: relative;
+    }
+    .bottom-cta .hero-orb {
+      width: 500px; height: 500px;
+      background: rgba(224,144,112,0.04);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      position: absolute;
+    }
+    .bottom-cta h2 {
+      font-family: 'Instrument Serif', serif;
+      font-size: clamp(36px, 5vw, 56px);
+      font-weight: 400; letter-spacing: -0.02em;
+      margin-bottom: 20px; position: relative;
+    }
+    .bottom-cta h2 i { font-style: italic; color: var(--accent); }
+    .bottom-cta p {
+      color: var(--text-dim); font-size: 16px;
+      margin-bottom: 40px; position: relative;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 48px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: relative; z-index: 1;
+    }
+    .footer-brand { font-family: 'Instrument Serif', serif; font-size: 16px; color: var(--accent-dim); }
+    .footer-links { display: flex; gap: 24px; }
+    .footer-links a {
+      font-size: 12px; color: var(--text-xdim);
+      text-decoration: none; transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--text-dim); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (max-width: 768px) {
+      nav { padding: 16px 20px; }
+      .nav-link { display: none; }
+      .wearable-grid, .feature-grid { grid-template-columns: 1fr; }
+      .story-grid { grid-template-columns: repeat(2, 1fr); gap: 32px; }
+      .story-grid::before { display: none; }
+      footer { flex-direction: column; gap: 16px; text-align: center; }
+    }
   </style>
 </head>
 <body>
-  <div class="orb orb1"></div>
-  <div class="orb orb2"></div>
+  <div class="grain"></div>
+
   <nav>
     <div class="nav-logo">VitalMind</div>
-    <div class="nav-badge">Early Access</div>
+    <div class="nav-right">
+      <a href="#how" class="nav-link">How it works</a>
+      <a href="#features" class="nav-link">Features</a>
+      <a href="/auth" class="nav-cta">Sign in</a>
+    </div>
   </nav>
 
   <div class="hero">
-    <div class="hero-eyebrow">AI Health Intelligence</div>
-    <h1>Your body is<br/>talking. <em>Listen.</em></h1>
-    <p class="hero-sub">Connect your wearable and get AI-powered insights that cross-reference sleep, recovery, and activity — telling you what's going wrong and what to do about it.</p>
-    <div class="picker-label">Choose your wearable to get started</div>
+    <div class="hero-orb orb-1"></div>
+    <div class="hero-orb orb-2"></div>
+    <div class="hero-ribbon">
+      <span class="ribbon-dot"></span>
+      Built for women with chronic conditions
+    </div>
+    <h1>The data exists.<br/>The <i>answers</i> didn't.</h1>
+    <p class="hero-p">You already track your sleep, recovery, and strain. VitalMind connects it all — with your symptoms, nutrition, and conditions — so you finally understand what your body is telling you.</p>
+    <div class="hero-cta">
+      <a href="#connect" class="btn-primary">
+        Get started to explore
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <section class="story" id="how">
+    <div class="section-label">How it works</div>
+    <div class="section-heading">Four steps to <i>clarity</i></div>
+    <div class="section-sub">No new habits required. Just connect the data you already have.</div>
+    <div class="story-grid">
+      <div class="story-step">
+        <div class="story-num coral">&#9201;</div>
+        <div class="story-title">Connect your wearable</div>
+        <div class="story-desc">Link WHOOP, Oura, or Apple Watch. One-time setup, we handle the rest.</div>
+      </div>
+      <div class="story-step">
+        <div class="story-num warm">&#127860;</div>
+        <div class="story-title">Log what you eat</div>
+        <div class="story-desc">Snap a photo of your meal or describe it. We estimate macros and factor it in.</div>
+      </div>
+      <div class="story-step">
+        <div class="story-num blush">&#128172;</div>
+        <div class="story-title">Share how you feel</div>
+        <div class="story-desc">Quick daily check-in — pain, energy, mood. Builds your personal pattern map.</div>
+      </div>
+      <div class="story-step">
+        <div class="story-num gold">&#10024;</div>
+        <div class="story-title">Get real insights</div>
+        <div class="story-desc">AI cross-references everything — wearable data, food, symptoms, conditions — and tells you exactly what to do.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="connect-section" id="connect">
+    <div class="section-label">Connect</div>
+    <div class="section-heading">Link your wearable</div>
+    <div class="section-sub">One-time connection. VitalMind pulls your data automatically after that.</div>
     <div class="wearable-grid">
-      <div class="wearable-card whoop selected" onclick="selectWearable('whoop',this)">
-        <div class="wearable-check">✓</div>
-        <span class="wearable-icon">⌚</span>
-        <div class="wearable-name">WHOOP</div>
-        <div class="wearable-desc">Recovery & strain</div>
+      <div class="w-card whoop sel" onclick="selW('whoop',this)">
+        <div class="w-check">&#10003;</div>
+        <span class="w-icon">&#9201;</span>
+        <div class="w-name">WHOOP</div>
+        <div class="w-desc">Recovery, strain, HRV</div>
       </div>
-      <div class="wearable-card oura" onclick="selectWearable('oura',this)">
-        <div class="wearable-check"></div>
-        <span class="wearable-icon">💍</span>
-        <div class="wearable-name">Oura Ring</div>
-        <div class="wearable-desc">Sleep & readiness</div>
+      <div class="w-card oura" onclick="selW('oura',this)">
+        <div class="w-check"></div>
+        <span class="w-icon">&#128141;</span>
+        <div class="w-name">Oura Ring</div>
+        <div class="w-desc">Sleep, readiness, SpO2</div>
       </div>
-      <div class="wearable-card disabled">
-        <div class="coming-soon">Soon</div>
-        <span class="wearable-icon">⌚</span>
-        <div class="wearable-name">Apple Watch</div>
-        <div class="wearable-desc">Coming soon</div>
-      </div>
-    </div>
-    <div class="cta-wrap">
-      <button class="connect-btn" id="connectBtn" onclick="handleConnect()">Connect your WHOOP →</button>
-      <div style="display:flex;align-items:center;gap:12px">
-        <button class="personalize-link" onclick="openPanel()">
-          <span class="dot"></span>
-          Personalize your insights
-        </button>
-        <span class="profile-saved" id="profileSaved">✓ Preferences saved</span>
+      <div class="w-card off">
+        <div class="w-soon">Soon</div>
+        <span class="w-icon">&#9201;</span>
+        <div class="w-name">Apple Watch</div>
+        <div class="w-desc">Coming soon</div>
       </div>
     </div>
-  </div>
+    <div class="w-cta-wrap">
+      <button class="btn-primary" id="connectBtn" onclick="doConnect()">
+        Connect WHOOP
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  </section>
 
-  <!-- Slide-in panel -->
-  <div class="panel-overlay" id="overlay" onclick="closePanel()"></div>
-  <div class="panel" id="panel">
-    <div class="panel-header">
-      <div class="panel-title">Personalize <em>your</em> insights</div>
-      <button class="panel-close" onclick="closePanel()">✕</button>
-    </div>
-    <p class="panel-sub">All optional. The more you share, the smarter VitalMind gets — tailoring every recommendation to your body and goals.</p>
-
-    <div class="panel-section">
-      <div class="panel-section-label">Primary goal</div>
-      <div class="cards" id="goals">
-        <div class="card selected" data-value="better_sleep" onclick="selectCard(this,'goals')"><span class="card-icon">😴</span><div class="card-label">Better Sleep</div></div>
-        <div class="card" data-value="more_energy" onclick="selectCard(this,'goals')"><span class="card-icon">⚡</span><div class="card-label">More Energy</div></div>
-        <div class="card" data-value="lose_weight" onclick="selectCard(this,'goals')"><span class="card-icon">🔥</span><div class="card-label">Lose Weight</div></div>
-        <div class="card" data-value="peak_performance" onclick="selectCard(this,'goals')"><span class="card-icon">🏆</span><div class="card-label">Peak Performance</div></div>
+  <section class="features" id="features">
+    <div class="section-label">Features</div>
+    <div class="section-heading">Built for bodies that <i>need more</i></div>
+    <div class="feature-grid">
+      <div class="f-card">
+        <div class="f-icon">&#128200;</div>
+        <div class="f-title">Recovery intelligence</div>
+        <div class="f-desc">7-day HRV, resting heart rate, and recovery — explained in the context of your conditions.</div>
+      </div>
+      <div class="f-card">
+        <div class="f-icon">&#128164;</div>
+        <div class="f-title">Sleep decoded</div>
+        <div class="f-desc">Sleep stages, debt, and disturbances — cross-referenced with what you ate and how you felt.</div>
+      </div>
+      <div class="f-card">
+        <div class="f-icon">&#127860;</div>
+        <div class="f-title">Food meets function</div>
+        <div class="f-desc">Photo your plate. VitalMind estimates macros and shows how food affects your recovery and symptoms.</div>
+      </div>
+      <div class="f-card">
+        <div class="f-icon">&#127947;</div>
+        <div class="f-title">Adaptive workout coach</div>
+        <div class="f-desc">Upload your plan. We tell you whether to push, modify, or rest — based on your biometrics today.</div>
+      </div>
+      <div class="f-card">
+        <div class="f-icon">&#127800;</div>
+        <div class="f-title">Condition-aware</div>
+        <div class="f-desc">Endometriosis, PCOS, thyroid — every recommendation is shaped by what your body is actually dealing with.</div>
+      </div>
+      <div class="f-card">
+        <div class="f-icon">&#128274;</div>
+        <div class="f-title">Private by design</div>
+        <div class="f-desc">Encrypted storage. No ads. No data selling. Your health data stays yours — always.</div>
       </div>
     </div>
+  </section>
 
-    <div class="panel-section">
-      <div class="panel-section-label">Health conditions (select all that apply)</div>
-      <div class="cards three" id="conditions">
-        <div class="card" data-value="endometriosis" onclick="toggleCard(this)"><span class="card-icon">🌸</span><div class="card-label">Endometriosis</div></div>
-        <div class="card" data-value="pcos" onclick="toggleCard(this)"><span class="card-icon">⚖️</span><div class="card-label">PCOS</div></div>
-        <div class="card" data-value="thyroid" onclick="toggleCard(this)"><span class="card-icon">🦋</span><div class="card-label">Thyroid</div></div>
-        <div class="card" data-value="high_stress" onclick="toggleCard(this)"><span class="card-icon">🧠</span><div class="card-label">High Stress</div></div>
-        <div class="card" data-value="chronic_fatigue" onclick="toggleCard(this)"><span class="card-icon">😓</span><div class="card-label">Chronic Fatigue</div></div>
-        <div class="card" data-value="none" onclick="toggleCard(this)"><span class="card-icon">✨</span><div class="card-label">None</div></div>
-      </div>
+  <section class="bottom-cta">
+    <div class="hero-orb"></div>
+    <h2>Your body is <i>complex.</i><br/>Your answers don't have to be.</h2>
+    <p>Free to explore. No credit card required.</p>
+    <a href="#connect" class="btn-primary" style="position:relative">
+      Get started to explore
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+  </section>
+
+  <footer>
+    <div class="footer-brand">VitalMind</div>
+    <div class="footer-links">
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="mailto:hello@vitalmind.app">Contact</a>
     </div>
-
-    <div class="panel-section">
-      <div class="panel-section-label">Dietary approach (select all that apply)</div>
-      <div class="cards three" id="diet">
-        <div class="card" data-value="fodmap" onclick="toggleCard(this)"><span class="card-icon">🥗</span><div class="card-label">FODMAP</div></div>
-        <div class="card" data-value="vegan" onclick="toggleCard(this)"><span class="card-icon">🌱</span><div class="card-label">Vegan</div></div>
-        <div class="card" data-value="keto" onclick="toggleCard(this)"><span class="card-icon">🥑</span><div class="card-label">Keto</div></div>
-        <div class="card" data-value="intermittent_fasting" onclick="toggleCard(this)"><span class="card-icon">⏱️</span><div class="card-label">Int. Fasting</div></div>
-        <div class="card" data-value="anti_inflammatory" onclick="toggleCard(this)"><span class="card-icon">🫚</span><div class="card-label">Anti-inflammatory</div></div>
-        <div class="card" data-value="none" onclick="toggleCard(this)"><span class="card-icon">🍽️</span><div class="card-label">No restrictions</div></div>
-      </div>
-    </div>
-
-    <button class="save-btn" onclick="saveProfile()">Save preferences →</button>
-  </div>
+  </footer>
 
   <script>
-    let selectedWearable = 'whoop';
-    const profile = { goal: 'better_sleep', conditions: [], diet: [] };
-
-    function openPanel() {
-      document.getElementById('panel').classList.add('open');
-      document.getElementById('overlay').classList.add('open');
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closePanel() {
-      document.getElementById('panel').classList.remove('open');
-      document.getElementById('overlay').classList.remove('open');
-      document.body.style.overflow = '';
-    }
-
-    function selectCard(el, groupId) {
-      document.querySelectorAll('#' + groupId + ' .card').forEach(c => c.classList.remove('selected'));
-      el.classList.add('selected');
-      if (groupId === 'goals') profile.goal = el.dataset.value;
-    }
-
-    function toggleCard(el) {
-      const value = el.dataset.value;
-      if (value === 'none') {
-        el.closest('.cards').querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
-        el.classList.add('selected');
-        return;
-      }
-      el.closest('.cards').querySelector('[data-value="none"]')?.classList.remove('selected');
-      el.classList.toggle('selected');
-    }
-
-    function saveProfile() {
-      profile.conditions = [...document.querySelectorAll('#conditions .card.selected')].map(c => c.dataset.value);
-      profile.diet = [...document.querySelectorAll('#diet .card.selected')].map(c => c.dataset.value);
-      closePanel();
-      document.getElementById('profileSaved').classList.add('visible');
-    }
-
-    function selectWearable(type, el) {
-      document.querySelectorAll('.wearable-card:not(.disabled)').forEach(c => {
-        c.classList.remove('selected');
-        c.querySelector('.wearable-check').textContent = '';
+    var wearable = 'whoop';
+    function selW(type, el) {
+      if (el.classList.contains('off')) return;
+      document.querySelectorAll('.w-card:not(.off)').forEach(function(c) {
+        c.classList.remove('sel');
+        var ch = c.querySelector('.w-check');
+        if (ch) ch.innerHTML = '';
       });
-      el.classList.add('selected');
-      el.querySelector('.wearable-check').textContent = '✓';
-      selectedWearable = type;
-      const btn = document.getElementById('connectBtn');
-      btn.textContent = type === 'whoop' ? 'Connect your WHOOP →' : 'Connect Oura Ring →';
-      btn.style.background = type === 'oura' ? '#a78bfa' : '';
+      el.classList.add('sel');
+      var check = el.querySelector('.w-check');
+      if (check) check.innerHTML = '&#10003;';
+      wearable = type;
+      var btn = document.getElementById('connectBtn');
+      if (type === 'whoop') {
+        btn.innerHTML = 'Connect WHOOP <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+        btn.style.background = '';
+      }
+      if (type === 'oura') {
+        btn.innerHTML = 'Connect Oura Ring <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+        btn.style.background = '#a48bf5';
+      }
     }
-
-    function handleConnect() {
-      if (selectedWearable === 'oura') { alert('Oura Ring support coming very soon!'); return; }
-      const profileStr = JSON.stringify(profile);
-      const profileEncoded = btoa(unescape(encodeURIComponent(profileStr)));
-      window.location.href = '/login?profile=' + profileEncoded;
+    function doConnect() {
+      if (wearable === 'oura') { alert('Oura Ring support coming very soon!'); return; }
+      window.location.href = '/auth?redirect=/connect-whoop';
     }
   </script>
 </body>
