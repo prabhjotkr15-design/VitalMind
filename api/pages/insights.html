@@ -120,6 +120,25 @@
     .fp-spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(12,10,11,0.3);border-top-color:#0c0a0b;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
     @keyframes spin{to{transform:rotate(360deg)}}
 
+  
+    .meals-section{background:var(--surface,#141112);border:1px solid rgba(255,235,225,0.06);border-radius:20px;padding:32px;margin-bottom:28px}
+    .meals-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+    .meals-title{font-family:'Instrument Serif',serif;font-size:20px;color:#f0ece8}
+    .meals-totals{display:flex;gap:16px}
+    .meals-total-item{text-align:center}
+    .meals-total-val{font-size:18px;font-weight:500;color:#e09070}
+    .meals-total-label{font-size:10px;color:rgba(240,236,232,0.3);letter-spacing:0.08em;text-transform:uppercase;margin-top:2px}
+    .meals-list{display:flex;flex-direction:column;gap:10px}
+    .meals-empty{font-size:14px;color:rgba(240,236,232,0.25);text-align:center;padding:24px}
+    .meal-card{background:#0c0a0b;border:1px solid rgba(255,235,225,0.04);border-radius:12px;padding:16px;display:flex;align-items:center;gap:16px}
+    .meal-time{font-size:11px;color:rgba(240,236,232,0.25);letter-spacing:0.06em;text-transform:uppercase;min-width:56px}
+    .meal-info{flex:1}
+    .meal-desc{font-size:14px;color:#f0ece8;margin-bottom:4px}
+    .meal-macros-inline{font-size:12px;color:rgba(240,236,232,0.35)}
+    .meal-macros-inline span{margin-right:12px}
+    .meal-flags-inline{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+    .meal-flag-sm{font-size:10px;padding:2px 8px;border-radius:100px;background:rgba(224,80,80,0.08);border:1px solid rgba(224,80,80,0.15);color:#e08080}
+
   </style>
 </head>
 <body>
@@ -154,6 +173,17 @@
       </div>
     </div>
     <div class="insight-card">__INSIGHT__</div>
+    
+    <div class="meals-section" id="mealsSection">
+      <div class="meals-head">
+        <div class="meals-title">Today's nutrition</div>
+        <div class="meals-totals" id="mealsTotals"></div>
+      </div>
+      <div class="meals-list" id="mealsList">
+        <div class="meals-empty" id="mealsEmpty">No meals logged yet today. Tap the button below to start.</div>
+      </div>
+    </div>
+
     <div class="workout-section">
       <div class="section-title">Cross-reference your workout plan</div>
       <div class="section-sub">Share your plan any way — Claude will tell you whether to push, modify, or rest today based on your biometrics.</div>
@@ -304,6 +334,7 @@
           (data.insight ? '<div class="fp-insight">' + data.insight + '</div>' : '') +
           '</div>';
         result.classList.add('show');
+        loadTodaysMeals();
       } catch(e) {
         result.innerHTML = '<div class="fp-result-card"><div class="fp-insight">Something went wrong. Please try again.</div></div>';
         result.classList.add('show');
@@ -312,6 +343,44 @@
       btn.innerHTML = 'Analyze this meal';
       btn.disabled = type === 'photo' ? false : false;
     }
+
+  
+    async function loadTodaysMeals() {
+      try {
+        var res = await fetch('/api/meals/today');
+        var data = await res.json();
+        if (!data.meals || data.meals.length === 0) return;
+
+        document.getElementById('mealsEmpty').style.display = 'none';
+        var list = document.getElementById('mealsList');
+
+        var totalsHtml = '<div class="meals-total-item"><div class="meals-total-val">' + data.totals.calories + '</div><div class="meals-total-label">Cal</div></div>' +
+          '<div class="meals-total-item"><div class="meals-total-val">' + data.totals.protein + 'g</div><div class="meals-total-label">Protein</div></div>' +
+          '<div class="meals-total-item"><div class="meals-total-val">' + data.totals.carbs + 'g</div><div class="meals-total-label">Carbs</div></div>' +
+          '<div class="meals-total-item"><div class="meals-total-val">' + data.totals.fat + 'g</div><div class="meals-total-label">Fat</div></div>';
+        document.getElementById('mealsTotals').innerHTML = totalsHtml;
+
+        var mealsHtml = '';
+        data.meals.forEach(function(meal) {
+          var time = new Date(meal.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          var mealType = meal.meal_type || 'meal';
+          var flagsHtml = '';
+          if (meal.flags && meal.flags.length > 0) {
+            meal.flags.forEach(function(f) { flagsHtml += '<span class="meal-flag-sm">' + f + '</span>'; });
+          }
+          mealsHtml += '<div class="meal-card">' +
+            '<div class="meal-time">' + mealType + '<br/>' + time + '</div>' +
+            '<div class="meal-info">' +
+              '<div class="meal-desc">' + (meal.description || 'Meal') + '</div>' +
+              '<div class="meal-macros-inline"><span>' + (meal.calories || 0) + ' cal</span><span>P ' + (meal.protein || 0) + 'g</span><span>C ' + (meal.carbs || 0) + 'g</span><span>F ' + (meal.fat || 0) + 'g</span></div>' +
+              (flagsHtml ? '<div class="meal-flags-inline">' + flagsHtml + '</div>' : '') +
+            '</div>' +
+          '</div>';
+        });
+        list.innerHTML = mealsHtml;
+      } catch(e) {}
+    }
+    loadTodaysMeals();
 
   </script>
 

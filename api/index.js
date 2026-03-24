@@ -413,6 +413,32 @@ app.post('/api/analyze-food', upload.single('photo'), async (req, res) => {
   }
 });
 
+
+app.get('/api/meals/today', async (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not logged in' });
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const today = new Date().toISOString().split('T')[0];
+    const { data } = await sb
+      .from('food_logs')
+      .select()
+      .eq('user_id', user.userId)
+      .gte('logged_at', today + 'T00:00:00')
+      .order('logged_at', { ascending: true });
+    const totals = (data || []).reduce((acc, m) => ({
+      calories: acc.calories + (m.calories || 0),
+      protein: acc.protein + (m.protein || 0),
+      carbs: acc.carbs + (m.carbs || 0),
+      fat: acc.fat + (m.fat || 0)
+    }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+    res.json({ meals: data || [], totals });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/logout', (req, res) => {
   res.clearCookie('vm_token');
   res.redirect('/');
