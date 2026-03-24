@@ -386,6 +386,33 @@ app.post('/api/daily-brief', async (req, res) => {
   return handler(req, res);
 });
 
+
+app.post('/api/analyze-food', upload.single('photo'), async (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not logged in' });
+
+  try {
+    const { getProfile: gp } = await import('./auth.js');
+    const profile = await gp(user.userId);
+    const { analyzeFood } = await import('./food-analyzer.js');
+
+    const type = req.body.type;
+    let result;
+
+    if (type === 'photo' && req.file) {
+      const base64 = req.file.buffer.toString('base64');
+      result = await analyzeFood(user.userId, 'photo', null, base64, req.file.mimetype, profile);
+    } else {
+      result = await analyzeFood(user.userId, 'text', req.body.content, null, null, profile);
+    }
+
+    res.json(result);
+  } catch(err) {
+    console.error('Food analysis error:', err.message);
+    res.status(500).json({ error: 'Failed to analyze food' });
+  }
+});
+
 app.get('/logout', (req, res) => {
   res.clearCookie('vm_token');
   res.redirect('/');

@@ -21,7 +21,7 @@ async function fetchWhoopData(accessToken) {
   };
 }
 
-async function generateInsight(whoopData, userProfile) {
+async function generateInsight(whoopData, userProfile, foodLogs) {
   const goalLabels = { better_sleep: 'better sleep', more_energy: 'more energy', lose_weight: 'weight loss', peak_performance: 'peak performance' };
   const goalText = goalLabels[userProfile?.goal] || 'overall health';
   const conditionsText = userProfile?.conditions?.filter(c => c !== 'none').join(', ') || 'none';
@@ -48,6 +48,11 @@ Structure:
 3. Three specific things to do today based on their biometrics and conditions
 
 Format in clean HTML using p, strong, ul, li tags only. No h1 or h2. Keep it under 200 words.
+
+Yesterday's food log (if any):
+${foodLogs && foodLogs.length > 0 ? JSON.stringify(foodLogs, null, 2) : 'No meals logged yesterday'}
+
+IMPORTANT: If food was logged, cross-reference it with recovery and HRV data. Tell the user specifically how what they ate may have affected their biometrics. For example: late eating + recovery drop, inflammatory foods + HRV decline, high-FODMAP + symptoms.
 
 WHOOP Data (past 7 days):
 ${JSON.stringify(whoopData, null, 2)}`
@@ -102,7 +107,7 @@ export default async function handler(req, res) {
 
         if (!whoopData.recovery?.length) { console.log('SKIP: still no recovery data after refresh'); continue; }
 
-        const { insight, firstName, latestRecovery, latestHRV, latestRHR } = await generateInsight(whoopData, profile);
+        const { insight, firstName, latestRecovery, latestHRV, latestRHR } = await generateInsight(whoopData, profile, foodLogs || foodLogs2 || []);
 
         const recoveryColor = latestRecovery >= 67 ? '#4ade80' : latestRecovery >= 34 ? '#f59e0b' : '#ef4444';
         const recoveryLabel = latestRecovery >= 67 ? 'Ready to perform' : latestRecovery >= 34 ? 'Moderate recovery' : 'Rest recommended';
