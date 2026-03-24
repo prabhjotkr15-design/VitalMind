@@ -75,6 +75,51 @@
     .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(7,9,15,0.3);border-top-color:#07090f;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
     @keyframes spin{to{transform:rotate(360deg)}}
     @media(max-width:600px){.metrics-grid{grid-template-columns:1fr}.header{padding:14px 18px}.main{padding:28px 16px 60px}}
+  
+    .food-fab{position:fixed;bottom:28px;right:28px;z-index:50;display:flex;align-items:center;gap:8px;padding:14px 22px;background:var(--accent,#e09070);color:var(--bg,#0c0a0b);border:none;border-radius:100px;cursor:pointer;font-family:'Outfit',sans-serif;font-weight:500;font-size:14px;transition:all .3s cubic-bezier(.16,1,.3,1);box-shadow:0 4px 24px rgba(224,144,112,0.3)}
+    .food-fab:hover{transform:translateY(-2px);box-shadow:0 6px 32px rgba(224,144,112,0.4)}
+    .fab-label{letter-spacing:0.02em}
+    .food-overlay{position:fixed;inset:0;background:rgba(12,10,11,0.7);backdrop-filter:blur(4px);z-index:200;opacity:0;pointer-events:none;transition:opacity .3s}
+    .food-overlay.open{opacity:1;pointer-events:all}
+    .food-panel{position:fixed;right:0;top:0;bottom:0;width:440px;max-width:100vw;background:#141112;border-left:1px solid rgba(255,235,225,0.06);z-index:201;transform:translateX(100%);transition:transform .4s cubic-bezier(.16,1,.3,1);overflow-y:auto;padding:36px 32px}
+    .food-panel.open{transform:translateX(0)}
+    .fp-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px}
+    .fp-title{font-family:'Instrument Serif',serif;font-size:24px;margin-bottom:4px;color:#f0ece8}
+    .fp-sub{font-size:13px;color:rgba(240,236,232,0.4)}
+    .fp-close{width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,235,225,0.06);background:transparent;color:rgba(240,236,232,0.5);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+    .fp-close:hover{border-color:#e09070;color:#e09070}
+    .fp-tabs{display:flex;gap:4px;background:#0c0a0b;border-radius:10px;padding:3px;margin-bottom:24px}
+    .fp-tab{flex:1;padding:10px;text-align:center;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:rgba(240,236,232,0.4);border:none;background:transparent;font-family:'Outfit',sans-serif;transition:all .2s}
+    .fp-tab.active{background:#141112;color:#f0ece8;border:1px solid rgba(255,235,225,0.06)}
+    .fp-tabpanel{display:none}
+    .fp-tabpanel.active{display:block}
+    .fp-upload{border:1.5px dashed rgba(255,235,225,0.08);border-radius:12px;padding:40px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+    .fp-upload:hover{border-color:rgba(224,144,112,0.3);background:rgba(224,144,112,0.02)}
+    .fp-upload input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+    .fp-upload-icon{font-size:32px;margin-bottom:10px}
+    .fp-upload-text{color:rgba(240,236,232,0.35);font-size:13px}
+    .fp-upload-text strong{color:rgba(224,144,112,0.8)}
+    .fp-filename{margin-top:10px;font-size:12px;color:rgba(240,236,232,0.3);min-height:18px}
+    .fp-textarea{width:100%;background:#0c0a0b;border:1px solid rgba(255,235,225,0.06);border-radius:12px;padding:16px;color:#f0ece8;font-family:'Outfit',sans-serif;font-size:14px;font-weight:300;line-height:1.6;resize:vertical;min-height:140px;transition:border-color .2s}
+    .fp-textarea:focus{outline:none;border-color:rgba(224,144,112,0.4)}
+    .fp-textarea::placeholder{color:rgba(240,236,232,0.2)}
+    .fp-submit{width:100%;padding:14px;background:#e09070;color:#0c0a0b;font-family:'Outfit',sans-serif;font-weight:500;font-size:14px;border:none;border-radius:10px;cursor:pointer;transition:all .2s;margin-top:16px}
+    .fp-submit:hover{background:#f0a888}
+    .fp-submit:disabled{opacity:0.4;cursor:not-allowed}
+    .fp-result{margin-top:24px;display:none}
+    .fp-result.show{display:block}
+    .fp-result-card{background:#0c0a0b;border:1px solid rgba(255,235,225,0.06);border-radius:12px;padding:20px;margin-bottom:12px}
+    .fp-meal-name{font-weight:500;font-size:15px;margin-bottom:12px;color:#f0ece8}
+    .fp-macros{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+    .fp-macro{text-align:center;padding:10px 4px;background:#141112;border-radius:8px}
+    .fp-macro-val{font-size:20px;font-weight:500;color:#e09070}
+    .fp-macro-label{font-size:10px;color:rgba(240,236,232,0.3);letter-spacing:0.08em;text-transform:uppercase;margin-top:4px}
+    .fp-flags{margin-bottom:12px}
+    .fp-flag{display:inline-block;padding:5px 12px;border-radius:100px;font-size:12px;margin:0 6px 6px 0;background:rgba(224,80,80,0.1);border:1px solid rgba(224,80,80,0.2);color:#e08080}
+    .fp-insight{font-size:14px;color:rgba(240,236,232,0.5);line-height:1.6;font-style:italic}
+    .fp-spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(12,10,11,0.3);border-top-color:#0c0a0b;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
   </style>
 </head>
 <body>
@@ -191,6 +236,122 @@
       } catch(e){result.innerHTML='<p>Something went wrong. Please try again.</p>';result.classList.add('visible');}
       btn.innerHTML='Analyze with my data →';btn.disabled=false;
     }
+  
+    var foodPhotoFile = null;
+
+    function openFoodPanel() {
+      document.getElementById('foodPanel').classList.add('open');
+      document.getElementById('foodOverlay').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeFoodPanel() {
+      document.getElementById('foodPanel').classList.remove('open');
+      document.getElementById('foodOverlay').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    function switchFoodTab(tab, e) {
+      document.querySelectorAll('.fp-tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.fp-tabpanel').forEach(function(p) { p.classList.remove('active'); });
+      e.target.classList.add('active');
+      document.getElementById('fp-' + tab).classList.add('active');
+      document.getElementById('foodResult').classList.remove('show');
+    }
+    function handleFoodPhoto(input) {
+      foodPhotoFile = input.files[0];
+      if (foodPhotoFile) {
+        document.getElementById('foodPhotoName').textContent = foodPhotoFile.name;
+        document.getElementById('foodPhotoBtn').disabled = false;
+      }
+    }
+    async function submitFood(type) {
+      var btn = type === 'photo' ? document.getElementById('foodPhotoBtn') : event.target;
+      var result = document.getElementById('foodResult');
+      btn.innerHTML = '<span class="fp-spinner"></span>Analyzing...';
+      btn.disabled = true;
+      result.classList.remove('show');
+
+      try {
+        var options = {};
+        if (type === 'photo' && foodPhotoFile) {
+          var formData = new FormData();
+          formData.append('type', 'photo');
+          formData.append('photo', foodPhotoFile);
+          options = { method: 'POST', body: formData };
+        } else {
+          var text = document.getElementById('foodText').value.trim();
+          if (!text) { btn.innerHTML = 'Analyze this meal'; btn.disabled = false; return; }
+          options = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'text', content: text }) };
+        }
+
+        var res = await fetch('/api/analyze-food', options);
+        var data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        var flagsHtml = '';
+        if (data.flags && data.flags.length > 0) {
+          data.flags.forEach(function(f) { flagsHtml += '<span class="fp-flag">' + f + '</span>'; });
+        }
+
+        result.innerHTML = '<div class="fp-result-card">' +
+          '<div class="fp-meal-name">' + (data.description || 'Meal logged') + '</div>' +
+          '<div class="fp-macros">' +
+            '<div class="fp-macro"><div class="fp-macro-val">' + (data.total?.calories || 0) + '</div><div class="fp-macro-label">Calories</div></div>' +
+            '<div class="fp-macro"><div class="fp-macro-val">' + (data.total?.protein || 0) + 'g</div><div class="fp-macro-label">Protein</div></div>' +
+            '<div class="fp-macro"><div class="fp-macro-val">' + (data.total?.carbs || 0) + 'g</div><div class="fp-macro-label">Carbs</div></div>' +
+            '<div class="fp-macro"><div class="fp-macro-val">' + (data.total?.fat || 0) + 'g</div><div class="fp-macro-label">Fat</div></div>' +
+          '</div>' +
+          (flagsHtml ? '<div class="fp-flags">' + flagsHtml + '</div>' : '') +
+          (data.insight ? '<div class="fp-insight">' + data.insight + '</div>' : '') +
+          '</div>';
+        result.classList.add('show');
+      } catch(e) {
+        result.innerHTML = '<div class="fp-result-card"><div class="fp-insight">Something went wrong. Please try again.</div></div>';
+        result.classList.add('show');
+      }
+
+      btn.innerHTML = 'Analyze this meal';
+      btn.disabled = type === 'photo' ? false : false;
+    }
+
   </script>
+
+  <button class="food-fab" id="foodFab" onclick="openFoodPanel()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+    <span class="fab-label">Log meal</span>
+  </button>
+
+  <div class="food-overlay" id="foodOverlay" onclick="closeFoodPanel()"></div>
+  <div class="food-panel" id="foodPanel">
+    <div class="fp-head">
+      <div>
+        <div class="fp-title">Log a meal</div>
+        <div class="fp-sub">Snap a photo or describe what you ate</div>
+      </div>
+      <button class="fp-close" onclick="closeFoodPanel()">&#10005;</button>
+    </div>
+
+    <div class="fp-tabs">
+      <button class="fp-tab active" onclick="switchFoodTab('photo',event)">Photo</button>
+      <button class="fp-tab" onclick="switchFoodTab('text',event)">Describe it</button>
+    </div>
+
+    <div class="fp-tabpanel active" id="fp-photo">
+      <div class="fp-upload">
+        <input type="file" id="foodPhoto" accept="image/*" capture="environment" onchange="handleFoodPhoto(this)"/>
+        <div class="fp-upload-icon">&#128247;</div>
+        <div class="fp-upload-text"><strong>Tap to take a photo</strong><br/>or upload from gallery</div>
+      </div>
+      <div class="fp-filename" id="foodPhotoName"></div>
+      <button class="fp-submit" id="foodPhotoBtn" onclick="submitFood('photo')" disabled>Analyze this meal</button>
+    </div>
+
+    <div class="fp-tabpanel" id="fp-text">
+      <textarea class="fp-textarea" id="foodText" placeholder="e.g. Chicken breast with rice and steamed broccoli. Side of hummus with pita chips. Glass of water."></textarea>
+      <button class="fp-submit" onclick="submitFood('text')">Analyze this meal</button>
+    </div>
+
+    <div class="fp-result" id="foodResult"></div>
+  </div>
+
 </body>
 </html>
