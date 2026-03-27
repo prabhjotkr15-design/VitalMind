@@ -107,7 +107,14 @@ export default async function handler(req, res) {
 
         if (!whoopData.recovery?.length) { console.log('SKIP: still no recovery data after refresh'); continue; }
 
-        const { insight, firstName, latestRecovery, latestHRV, latestRHR } = await generateInsight(whoopData, profile, foodLogs || foodLogs2 || []);
+        
+        let userFoodLogs = [];
+        try {
+          const yday = new Date(Date.now() - 86400000 - 7*60*60*1000).toISOString().split('T')[0];
+          const { data: fl } = await supabase.from('food_logs').select().eq('user_id', tokenRow.user_id).gte('logged_at', yday + 'T00:00:00').order('logged_at', { ascending: true });
+          userFoodLogs = fl || [];
+        } catch(e) {}
+        const { insight, firstName, latestRecovery, latestHRV, latestRHR } = await generateInsight(whoopData, profile, userFoodLogs);
 
         const recoveryColor = latestRecovery >= 67 ? '#4ade80' : latestRecovery >= 34 ? '#f59e0b' : '#ef4444';
         const recoveryLabel = latestRecovery >= 67 ? 'Ready to perform' : latestRecovery >= 34 ? 'Moderate recovery' : 'Rest recommended';
