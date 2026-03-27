@@ -346,7 +346,7 @@
       document.getElementById('micLabel').classList.remove('recording');
       if (voiceText.trim()) {
         document.getElementById('voiceSubmitBtn').style.display = 'block';
-        submitFood('voice');
+        setTimeout(function() { submitFood('voice'); }, 500);
       }
     }
 
@@ -416,10 +416,11 @@
           (data.insight ? '<div class="fp-insight">' + data.insight + '</div>' : '') +
           '</div>';
         result.classList.add('show');
-        loadTodaysMeals();
+        try { loadTodaysMeals(); } catch(e) {}
       } catch(e) {
         result.innerHTML = '<div class="fp-result-card"><div class="fp-insight">Something went wrong. Please try again.</div></div>';
         result.classList.add('show');
+        try { loadTodaysMeals(); } catch(e) {}
       }
 
       btn.innerHTML = 'Analyze this meal';
