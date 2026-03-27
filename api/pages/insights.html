@@ -103,6 +103,15 @@
     .fp-textarea{width:100%;background:#0c0a0b;border:1px solid rgba(255,235,225,0.06);border-radius:12px;padding:16px;color:#f0ece8;font-family:'Outfit',sans-serif;font-size:14px;font-weight:300;line-height:1.6;resize:vertical;min-height:140px;transition:border-color .2s}
     .fp-textarea:focus{outline:none;border-color:rgba(224,144,112,0.4)}
     .fp-textarea::placeholder{color:rgba(240,236,232,0.2)}
+    .fp-voice-area{text-align:center;padding:32px 0}
+    .fp-mic{width:80px;height:80px;border-radius:50%;border:2px solid rgba(224,144,112,0.3);background:rgba(224,144,112,0.05);cursor:pointer;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;transition:all .3s;color:rgba(224,144,112,0.7)}
+    .fp-mic:hover{border-color:rgba(224,144,112,0.6);background:rgba(224,144,112,0.1)}
+    .fp-mic.recording{border-color:#e09070;background:rgba(224,144,112,0.15);animation:pulse 1.5s ease-in-out infinite;color:#e09070}
+    @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(224,144,112,0.2)}50%{box-shadow:0 0 0 16px rgba(224,144,112,0)}}
+    .fp-mic-label{font-size:13px;color:rgba(240,236,232,0.35);margin-bottom:20px}
+    .fp-mic-label.recording{color:#e09070}
+    .fp-transcript{min-height:60px;background:#0c0a0b;border:1px solid rgba(255,235,225,0.06);border-radius:12px;padding:16px;font-size:14px;color:#f0ece8;line-height:1.6;text-align:left;display:none}
+    .fp-transcript.show{display:block}
     .fp-submit{width:100%;padding:14px;background:#e09070;color:#0c0a0b;font-family:'Outfit',sans-serif;font-weight:500;font-size:14px;border:none;border-radius:10px;cursor:pointer;transition:all .2s;margin-top:16px}
     .fp-submit:hover{background:#f0a888}
     .fp-submit:disabled{opacity:0.4;cursor:not-allowed}
@@ -268,6 +277,77 @@
     }
   
     var foodPhotoFile = null;
+    var recognition = null;
+    var isRecording = false;
+    var voiceText = '';
+
+    function toggleVoice() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert('Voice input is not supported in this browser. Try Chrome on desktop or mobile.');
+        return;
+      }
+
+      if (isRecording) {
+        stopVoice();
+        return;
+      }
+
+      var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = function() {
+        isRecording = true;
+        document.getElementById('micBtn').classList.add('recording');
+        document.getElementById('micLabel').textContent = 'Listening... tap to stop';
+        document.getElementById('micLabel').classList.add('recording');
+        document.getElementById('transcript').classList.add('show');
+        document.getElementById('transcript').textContent = '';
+      };
+
+      recognition.onresult = function(event) {
+        var interim = '';
+        var final = '';
+        for (var i = 0; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            final += event.results[i][0].transcript;
+          } else {
+            interim += event.results[i][0].transcript;
+          }
+        }
+        voiceText = final || interim;
+        document.getElementById('transcript').textContent = voiceText || 'Listening...';
+      };
+
+      recognition.onerror = function(event) {
+        console.log('Speech error:', event.error);
+        stopVoice();
+        if (event.error === 'not-allowed') {
+          document.getElementById('micLabel').textContent = 'Microphone access denied. Check browser permissions.';
+        }
+      };
+
+      recognition.onend = function() {
+        if (isRecording) {
+          stopVoice();
+        }
+      };
+
+      recognition.start();
+    }
+
+    function stopVoice() {
+      isRecording = false;
+      if (recognition) recognition.stop();
+      document.getElementById('micBtn').classList.remove('recording');
+      document.getElementById('micLabel').textContent = 'Tap to speak again';
+      document.getElementById('micLabel').classList.remove('recording');
+      if (voiceText.trim()) {
+        document.getElementById('voiceSubmitBtn').style.display = 'block';
+      }
+    }
 
     function openFoodPanel() {
       document.getElementById('foodPanel').classList.add('open');
@@ -308,8 +388,9 @@
           formData.append('photo', foodPhotoFile);
           options = { method: 'POST', body: formData };
         } else {
-          var text = document.getElementById('foodText').value.trim();
+          var text = type === 'voice' ? voiceText.trim() : document.getElementById('foodText').value.trim();
           if (!text) { btn.innerHTML = 'Analyze this meal'; btn.disabled = false; return; }
+        if (type === 'voice') type = 'text';
           options = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'text', content: text }) };
         }
 
@@ -401,7 +482,8 @@
 
     <div class="fp-tabs">
       <button class="fp-tab active" onclick="switchFoodTab('photo',event)">Photo</button>
-      <button class="fp-tab" onclick="switchFoodTab('text',event)">Describe it</button>
+      <button class="fp-tab" onclick="switchFoodTab('voice',event)">Voice</button>
+      <button class="fp-tab" onclick="switchFoodTab('text',event)">Type it</button>
     </div>
 
     <div class="fp-tabpanel active" id="fp-photo">
@@ -414,6 +496,16 @@
       <button class="fp-submit" id="foodPhotoBtn" onclick="submitFood('photo')" disabled>Analyze this meal</button>
     </div>
 
+    <div class="fp-tabpanel" id="fp-voice">
+      <div class="fp-voice-area" id="voiceArea">
+        <button class="fp-mic" id="micBtn" onclick="toggleVoice()">
+          <svg id="micIcon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="1" width="6" height="11" rx="3"/><path d="M19 10v1a7 7 0 01-14 0v-1"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </button>
+        <div class="fp-mic-label" id="micLabel">Tap to start speaking</div>
+        <div class="fp-transcript" id="transcript"></div>
+      </div>
+      <button class="fp-submit" id="voiceSubmitBtn" onclick="submitFood('voice')" style="display:none">Analyze this meal</button>
+    </div>
     <div class="fp-tabpanel" id="fp-text">
       <textarea class="fp-textarea" id="foodText" placeholder="e.g. Chicken breast with rice and steamed broccoli. Side of hummus with pita chips. Glass of water."></textarea>
       <button class="fp-submit" onclick="submitFood('text')">Analyze this meal</button>
