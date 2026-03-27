@@ -3,7 +3,17 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 
+function getMealType() {
+  const now = new Date();
+  const hour = new Date(now.getTime() - 7 * 60 * 60 * 1000).getHours();
+  if (hour < 11) return 'breakfast';
+  if (hour < 15) return 'lunch';
+  if (hour < 17) return 'snack';
+  return 'dinner';
+}
+
 export async function analyzeFood(userId, type, content, imageBase64, imageMimeType, userProfile) {
+  const autoMealType = getMealType();
   const conditionsText = userProfile?.conditions?.filter(c => c !== 'none').join(', ') || 'none';
   const dietText = userProfile?.diet?.filter(d => d !== 'none').join(', ') || 'none';
 
@@ -54,7 +64,7 @@ For flags: if FODMAP diet, flag garlic, onion, wheat, lactose, legumes. If endom
 
   await supabase.from('food_logs').insert({
     user_id: userId,
-    meal_type: parsed.meal_type || 'snack',
+    meal_type: autoMealType,
     description: parsed.description,
     calories: parsed.total?.calories || 0,
     protein: parsed.total?.protein || 0,
