@@ -447,7 +447,9 @@
 
         var mealsHtml = '';
         data.meals.forEach(function(meal) {
-          var time = new Date(meal.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          var utc = new Date(meal.logged_at);
+          var pst = new Date(utc.getTime() - 7 * 60 * 60 * 1000);
+          var time = pst.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           var mealType = meal.meal_type || 'meal';
           var flagsHtml = '';
           if (meal.flags && meal.flags.length > 0) {

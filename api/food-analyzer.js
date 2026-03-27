@@ -5,12 +5,11 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANO
 
 function getMealType() {
   const now = new Date();
-  const pst = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
-  const hour = pst.getHours();
-  console.log('Meal type detection - PST hour:', hour);
-  if (hour < 11) return 'breakfast';
-  if (hour < 15) return 'lunch';
-  if (hour < 17) return 'snack';
+  const utcHour = now.getUTCHours();
+  const pstHour = (utcHour - 7 + 24) % 24;
+  if (pstHour < 11) return 'breakfast';
+  if (pstHour < 15) return 'lunch';
+  if (pstHour < 17) return 'snack';
   return 'dinner';
 }
 
