@@ -439,6 +439,12 @@ app.get('/api/meals/today', async (req, res) => {
   }
 });
 
+
+app.post('/api/evening-summary', async (req, res) => {
+  const handler = (await import('./evening-summary.js')).default;
+  return handler(req, res);
+});
+
 app.get('/logout', (req, res) => {
   res.clearCookie('vm_token');
   res.redirect('/');
