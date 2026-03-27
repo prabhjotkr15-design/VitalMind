@@ -342,11 +342,13 @@
       isRecording = false;
       if (recognition) recognition.stop();
       document.getElementById('micBtn').classList.remove('recording');
-      document.getElementById('micLabel').textContent = 'Tap to speak again';
       document.getElementById('micLabel').classList.remove('recording');
       if (voiceText.trim()) {
-        document.getElementById('voiceSubmitBtn').style.display = 'block';
-        setTimeout(function() { submitFood('voice'); }, 500);
+        document.getElementById('micLabel').textContent = 'Analyzing your meal...';
+        document.getElementById('voiceSubmitBtn').style.display = 'none';
+        setTimeout(function() { submitFood('voice'); }, 800);
+      } else {
+        document.getElementById('micLabel').textContent = 'Tap to speak again';
       }
     }
 
