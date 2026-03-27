@@ -447,6 +447,12 @@ app.post('/api/evening-summary', async (req, res) => {
   return handler(req, res);
 });
 
+
+app.post('/api/meal-reminder', async (req, res) => {
+  const handler = (await import('./meal-reminder.js')).default;
+  return handler(req, res);
+});
+
 app.get('/logout', (req, res) => {
   res.clearCookie('vm_token');
   res.redirect('/');
