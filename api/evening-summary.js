@@ -20,7 +20,9 @@ export default async function handler(req, res) {
 
     let sent = 0;
     let failed = 0;
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const pst = new Date(now.getTime() - 7 * 60 * 60 * 1000);
+    const today = pst.toISOString().split('T')[0];
 
     for (const tokenRow of allTokens) {
       try {

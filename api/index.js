@@ -420,7 +420,9 @@ app.get('/api/meals/today', async (req, res) => {
   try {
     const { createClient } = await import('@supabase/supabase-js');
     const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const pst = new Date(now.getTime() - 7 * 60 * 60 * 1000);
+    const today = pst.toISOString().split('T')[0];
     const { data } = await sb
       .from('food_logs')
       .select()
