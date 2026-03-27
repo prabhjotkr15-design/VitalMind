@@ -377,7 +377,7 @@
       }
     }
     async function submitFood(type) {
-      var btn = type === 'photo' ? document.getElementById('foodPhotoBtn') : event.target;
+      var btn = type === 'photo' ? document.getElementById('foodPhotoBtn') : type === 'voice' ? document.getElementById('voiceSubmitBtn') : event.target;
       var result = document.getElementById('foodResult');
       btn.innerHTML = '<span class="fp-spinner"></span>Analyzing...';
       btn.disabled = true;
