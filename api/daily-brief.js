@@ -9,15 +9,17 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function fetchWhoopData(accessToken) {
   const headers = { Authorization: 'Bearer ' + accessToken };
-  const [profileRes, recoveryRes, sleepRes] = await Promise.allSettled([
+  const [profileRes, recoveryRes, sleepRes, workoutRes] = await Promise.allSettled([
     axios.get('https://api.prod.whoop.com/developer/v1/user/profile/basic', { headers }),
     axios.get('https://api.prod.whoop.com/developer/v2/recovery?limit=7', { headers }),
     axios.get('https://api.prod.whoop.com/developer/v2/activity/sleep?limit=7', { headers }),
+    axios.get('https://api.prod.whoop.com/developer/v2/workout?limit=7', { headers }),
   ]);
   return {
     profile: profileRes.status === 'fulfilled' ? profileRes.value.data : null,
     recovery: recoveryRes.status === 'fulfilled' ? recoveryRes.value.data.records : [],
     sleep: sleepRes.status === 'fulfilled' ? sleepRes.value.data.records : [],
+    workout: workoutRes.status === 'fulfilled' ? workoutRes.value.data.records : [],
   };
 }
 
@@ -44,10 +46,12 @@ User goal: ${goalText}. Conditions: ${conditionsText}. Diet: ${dietText}.
 
 Structure:
 1. One-line summary of how their body is doing today (use recovery score)
-2. The most important insight from the past 24 hours
-3. Three specific things to do today based on their biometrics and conditions
+2. Cross-reference: connect the dots between their wearable data, what they ate, and their workouts. Example: "You did a high strain workout yesterday + ate late + your HRV dropped — here is why and what to adjust"
+3. Three specific things to do today based on ALL their data — biometrics, food, workouts, and conditions
 
-Format in clean HTML using p, strong, ul, li tags only. No h1 or h2. Keep it under 200 words.
+Be the coach who sees the full picture. No generic advice. Every recommendation must reference actual numbers from their data.
+
+Format in clean HTML using p, strong, ul, li tags only. No h1 or h2. Keep it under 250 words.
 
 Yesterday's food log (if any):
 ${foodLogs && foodLogs.length > 0 ? JSON.stringify(foodLogs, null, 2) : 'No meals logged yesterday'}
