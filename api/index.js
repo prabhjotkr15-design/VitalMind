@@ -179,7 +179,20 @@ app.get('/insights-stored', async (req, res) => {
 
   try {
     let tokens = await getWhoopTokens(user.userId);
-    if (!tokens) return res.redirect('/connect-whoop');
+    if (!tokens) {
+      const firstName = 'there';
+      let html = getPage('insights.html');
+      html = html.replace(/\{\{FIRST_NAME\}\}/g, firstName);
+      html = html.replace(/\{\{RECOVERY\}\}/g, '--');
+      html = html.replace(/\{\{RECOVERY_LABEL\}\}/g, 'Connect a wearable');
+      html = html.replace(/\{\{RECOVERY_COLOR\}\}/g, 'rgba(240,236,232,0.3)');
+      html = html.replace(/\{\{HRV\}\}/g, '--');
+      html = html.replace(/\{\{RHR\}\}/g, '--');
+      html = html.replace(/\{\{INSIGHT\}\}/g, '<p>Connect your WHOOP, Oura, or Apple Health to get personalized health insights. In the meantime, start logging your meals and VitalMind can already analyze your nutrition and flag triggers based on your conditions.</p>');
+      html = html.replace(/\{\{SLEEP_HTML\}\}/g, '');
+      html = html.replace(/\{\{WHOOP_STATUS\}\}/g, 'Not connected');
+      return res.send(html);
+    }
 
     const userProfile = await getProfile(user.userId) || {};
     let headers = { Authorization: 'Bearer ' + tokens.access_token };
