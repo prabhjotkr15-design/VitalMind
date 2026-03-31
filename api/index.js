@@ -53,11 +53,12 @@ app.post('/api/auth/signup', async (req, res) => {
     if (password.length < 8) throw new Error('Password must be at least 8 characters');
     const { token, userId } = await signup(email, password);
     const phone = req.body.phone;
+    const { createClient: cc } = await import('@supabase/supabase-js');
+    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
     if (phone) {
-      const { createClient: cc } = await import('@supabase/supabase-js');
-      const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
       await sb.from('users').update({ phone: phone.replace(/[\s-]/g, '') }).eq('id', userId);
     }
+    await sb.from('user_profiles').upsert({ user_id: userId, brief_hour: 7 }, { onConflict: 'user_id' });
     const profile = req.body.profile;
     if (profile) {
       try {
