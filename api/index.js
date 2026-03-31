@@ -228,7 +228,7 @@ app.get('/insights-stored', async (req, res) => {
     const claudeRes = await axios.post(
       'https://api.anthropic.com/v1/messages',
       {
-        model: 'claude-opus-4-5',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 1200,
         messages: [{
           role: 'user',
