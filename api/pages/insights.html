@@ -148,6 +148,14 @@
     .meal-flags-inline{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
     .meal-flag-sm{font-size:10px;padding:2px 8px;border-radius:100px;background:rgba(224,80,80,0.08);border:1px solid rgba(224,80,80,0.15);color:#e08080}
 
+  
+    .brief-time-section{display:flex;align-items:center;gap:12px;margin-bottom:28px;padding:16px 20px;background:#141112;border:1px solid rgba(255,235,225,0.06);border-radius:12px}
+    .bt-label{font-size:14px;color:rgba(240,236,232,0.5)}
+    .bt-select{background:#0c0a0b;border:1px solid rgba(255,235,225,0.1);border-radius:8px;padding:8px 12px;color:#f0ece8;font-family:'Outfit',sans-serif;font-size:14px;cursor:pointer}
+    .bt-select:focus{outline:none;border-color:rgba(224,144,112,0.4)}
+    .bt-saved{font-size:12px;color:#4ade80;opacity:0;transition:opacity .3s}
+    .bt-saved.show{opacity:1}
+
   </style>
 </head>
 <body>
@@ -183,6 +191,19 @@
     </div>
     <div class="insight-card">__INSIGHT__</div>
     
+    
+    <div class="brief-time-section">
+      <div class="bt-label">Morning brief at</div>
+      <select class="bt-select" id="briefTimeSelect" onchange="updateBriefTime(this.value)">
+        <option value="6">6:00 AM</option>
+        <option value="7" selected>7:00 AM</option>
+        <option value="8">8:00 AM</option>
+        <option value="9">9:00 AM</option>
+        <option value="10">10:00 AM</option>
+      </select>
+      <span class="bt-saved" id="btSaved"></span>
+    </div>
+
     <div class="meals-section" id="mealsSection">
       <div class="meals-head">
         <div class="meals-title">Today's nutrition</div>
@@ -468,6 +489,29 @@
       } catch(e) {}
     }
     loadTodaysMeals();
+
+  
+    async function loadBriefTime() {
+      try {
+        var res = await fetch('/api/brief-time-current');
+        var data = await res.json();
+        if (data.hour) document.getElementById('briefTimeSelect').value = data.hour;
+      } catch(e) {}
+    }
+    async function updateBriefTime(hour) {
+      try {
+        await fetch('/api/brief-time', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hour: parseInt(hour) })
+        });
+        var saved = document.getElementById('btSaved');
+        saved.textContent = 'Saved!';
+        saved.classList.add('show');
+        setTimeout(function() { saved.classList.remove('show'); }, 2000);
+      } catch(e) {}
+    }
+    loadBriefTime();
 
   </script>
 

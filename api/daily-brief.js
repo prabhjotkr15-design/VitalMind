@@ -123,6 +123,11 @@ export default async function handler(req, res) {
 
         const { data: profile } = await supabase.from('user_profiles').select().eq('user_id', tokenRow.user_id).single();
 
+        const briefHour = profile?.brief_hour ?? 7;
+        const now = new Date();
+        const pstHour = (now.getUTCHours() - 7 + 24) % 24;
+        if (pstHour !== briefHour) { continue; }
+
         let whoopData = await fetchWhoopData(accessToken);
 
         if (!whoopData.recovery?.length) {

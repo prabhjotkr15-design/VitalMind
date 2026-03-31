@@ -465,6 +465,28 @@ app.post('/api/whatsapp/incoming', async (req, res) => {
   return handleIncoming(req, res);
 });
 
+
+app.post('/api/brief-time', async (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not logged in' });
+  const hour = parseInt(req.body.hour);
+  if (isNaN(hour) || hour < 6 || hour > 10) return res.status(400).json({ error: 'Hour must be 6-10' });
+  const { createClient: cc } = await import('@supabase/supabase-js');
+  const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+  await sb.from('user_profiles').update({ brief_hour: hour }).eq('user_id', user.userId);
+  res.json({ ok: true, hour });
+});
+
+
+app.get('/api/brief-time-current', async (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not logged in' });
+  const { createClient: cc } = await import('@supabase/supabase-js');
+  const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+  const { data } = await sb.from('user_profiles').select('brief_hour').eq('user_id', user.userId).single();
+  res.json({ hour: data?.brief_hour ?? 7 });
+});
+
 app.get('/logout', (req, res) => {
   res.clearCookie('vm_token');
   res.redirect('/');
