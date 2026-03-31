@@ -453,6 +453,12 @@ app.post('/api/meal-reminder', async (req, res) => {
   return handler(req, res);
 });
 
+
+app.post('/api/whatsapp/incoming', async (req, res) => {
+  const { handleIncoming } = await import('./whatsapp.js');
+  return handleIncoming(req, res);
+});
+
 app.get('/logout', (req, res) => {
   res.clearCookie('vm_token');
   res.redirect('/');
