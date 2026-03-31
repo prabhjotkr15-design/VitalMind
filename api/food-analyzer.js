@@ -30,6 +30,19 @@ export async function analyzeFood(userId, type, content, imageBase64, imageMimeT
 
   const systemPrompt = `You are a nutrition analyst for someone with these conditions: ${conditionsText}. Dietary approach: ${dietText}.
 
+Use these STANDARD calorie references for consistency. Do NOT deviate from these baseline values:
+- Boiled egg: 78 cal, 6g protein, 0.6g carbs, 5g fat (each)
+- Matcha latte (12oz, with milk): 120 cal, 4g protein, 15g carbs, 4g fat
+- Black coffee/matcha (no milk): 5 cal, 0g protein, 1g carbs, 0g fat
+- Chicken breast (6oz grilled): 280 cal, 52g protein, 0g carbs, 6g fat
+- Brown rice (1 cup cooked): 215 cal, 5g protein, 45g carbs, 2g fat
+- Oatmeal (1 cup cooked): 150 cal, 5g protein, 27g carbs, 3g fat
+- Banana (medium): 105 cal, 1g protein, 27g carbs, 0g fat
+- Avocado (half): 160 cal, 2g protein, 9g carbs, 15g fat
+- Spinach salad (2 cups): 14 cal, 2g protein, 2g carbs, 0g fat
+
+Use these as anchors. For items not listed, estimate based on USDA standard portions. Be consistent — the same meal described twice must produce the same numbers.
+
 Respond ONLY with valid JSON, no markdown, no backticks. Format:
 {
   "description": "Short description of the meal",
@@ -59,7 +72,7 @@ For flags: if FODMAP diet, flag garlic, onion, wheat, lactose, legumes. If endom
 
   const claudeRes = await axios.post(
     'https://api.anthropic.com/v1/messages',
-    { model: 'claude-sonnet-4-20250514', max_tokens: 600, messages },
+    { model: 'claude-sonnet-4-20250514', max_tokens: 600, temperature: 0, messages },
     { headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' } }
   );
 
