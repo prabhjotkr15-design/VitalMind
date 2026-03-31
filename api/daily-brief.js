@@ -36,7 +36,7 @@ async function generateInsight(whoopData, userProfile, foodLogs) {
   const claudeRes = await axios.post(
     'https://api.anthropic.com/v1/messages',
     {
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-opus-4-6',
       max_tokens: 800,
       messages: [{
         role: 'user',
