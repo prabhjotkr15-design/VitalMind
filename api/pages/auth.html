@@ -57,7 +57,9 @@
     </div>
   </div>
   <script>
-    const redirect = new URLSearchParams(window.location.search).get('redirect') || '/';
+    const params = new URLSearchParams(window.location.search);
+    const loginRedirect = params.get('redirect') || '/dashboard';
+    const signupRedirect = params.get('flow') === 'whoop' ? '/onboarding?flow=whoop' : '/onboarding';
 
     function switchTab(tab) {
       document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='signup')));
@@ -82,7 +84,7 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
         document.cookie = 'vm_token=' + data.token + ';path=/;max-age=2592000';
-        window.location.href = redirect;
+        window.location.href = loginRedirect;
       } catch(e) {
         err.textContent = e.message;
         err.classList.add('visible');
@@ -109,7 +111,7 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
         document.cookie = 'vm_token=' + data.token + ';path=/;max-age=2592000';
-        window.location.href = redirect;
+        window.location.href = signupRedirect;
       } catch(e) {
         err.textContent = e.message;
         err.classList.add('visible');

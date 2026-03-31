@@ -86,8 +86,6 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/dashboard', async (req, res) => {
   const user = getUser(req);
   if (!user) return res.redirect('/auth?redirect=/dashboard');
-  const tokens = await getWhoopTokens(user.userId);
-  if (!tokens) return res.redirect('/connect-whoop');
   res.redirect('/insights-stored');
 });
 
