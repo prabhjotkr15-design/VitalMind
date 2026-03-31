@@ -54,8 +54,40 @@ export async function handleIncoming(req, res) {
         });
         const base64 = Buffer.from(imgRes.data).toString('base64');
         result = await analyzeFood(user.id, 'photo', null, base64, mediaType, profile);
+      } else if (mediaType && mediaType.startsWith('audio/')) {
+        const axios = (await import('axios')).default;
+        const audioRes = await axios.get(mediaUrl, {
+          responseType: 'arraybuffer',
+          auth: { username: process.env.TWILIO_ACCOUNT_SID, password: process.env.TWILIO_AUTH_TOKEN }
+        });
+        const audioBase64 = Buffer.from(audioRes.data).toString('base64');
+
+        const transcribeRes = await axios.post(
+          'https://api.anthropic.com/v1/messages',
+          {
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 300,
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'text', text: 'This is a base64-encoded audio file of someone describing what they ate. Transcribe what they said about their meal. Return ONLY the meal description, nothing else. If you cannot process the audio, return "could not process audio".' },
+                { type: 'text', text: 'Audio base64 (' + mediaType + '): ' + audioBase64.substring(0, 1000) + '...' }
+              ]
+            }]
+          },
+          { headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' } }
+        );
+
+        const transcribed = transcribeRes.data.content[0].text;
+        if (transcribed && !transcribed.includes('could not process')) {
+          result = await analyzeFood(user.id, 'text', transcribed, null, null, profile);
+        } else {
+          const twiml = '<Response><Message>Sorry, I could not understand the voice note. Try sending a text message or photo instead.</Message></Response>';
+          res.type('text/xml').send(twiml);
+          return;
+        }
       } else {
-        const twiml = '<Response><Message>Send a photo of your meal or describe it in text. Voice notes coming soon!</Message></Response>';
+        const twiml = '<Response><Message>Send a photo of your meal, a voice note, or describe it in text!</Message></Response>';
         res.type('text/xml').send(twiml);
         return;
       }

@@ -3,7 +3,15 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 
-function getMealType() {
+function getMealType(textContent) {
+  if (textContent) {
+    const lower = textContent.toLowerCase();
+    if (lower.includes('breakfast') || lower.includes('morning meal')) return 'breakfast';
+    if (lower.includes('lunch') || lower.includes('midday')) return 'lunch';
+    if (lower.includes('dinner') || lower.includes('supper') || lower.includes('evening meal')) return 'dinner';
+    if (lower.includes('snack') || lower.includes('snacking')) return 'snack';
+    if (lower.match(/for (my )?brunch/)) return 'lunch';
+  }
   const now = new Date();
   const utcHour = now.getUTCHours();
   const pstHour = (utcHour - 7 + 24) % 24;
@@ -14,7 +22,7 @@ function getMealType() {
 }
 
 export async function analyzeFood(userId, type, content, imageBase64, imageMimeType, userProfile) {
-  const autoMealType = getMealType();
+  const autoMealType = getMealType(content);
   const conditionsText = userProfile?.conditions?.filter(c => c !== 'none').join(', ') || 'none';
   const dietText = userProfile?.diet?.filter(d => d !== 'none').join(', ') || 'none';
 
