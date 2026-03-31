@@ -3,143 +3,259 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>VitalMind — Quick Setup</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <title>VitalMind — Set up your profile</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{--bg:#07090f;--surface:#0d1117;--border:#1c2535;--accent:#e8d5a3;--accent2:#c9a96e;--text:#f0f4ff;--muted:#5a6a85;--muted2:#8a9ab8}
-    body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
-    .orb{position:fixed;border-radius:50%;pointer-events:none}
-    .orb1{width:600px;height:600px;background:radial-gradient(circle,rgba(232,213,163,0.05) 0%,transparent 70%);top:-200px;right:-200px}
-    .orb2{width:400px;height:400px;background:radial-gradient(circle,rgba(167,139,250,0.04) 0%,transparent 70%);bottom:-100px;left:-100px}
-    .container{max-width:560px;width:100%;position:relative;z-index:1}
-    .logo{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--accent);text-align:center;margin-bottom:40px}
-    .progress{display:flex;gap:6px;margin-bottom:48px;justify-content:center}
-    .progress-dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:all .3s}
-    .progress-dot.active{background:var(--accent);width:24px;border-radius:3px}
-    .progress-dot.done{background:var(--accent2)}
-    .step{display:none;animation:fadeUp .4s ease forwards}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#0c0a0b;color:#f0ece8;font-family:'Outfit',sans-serif;min-height:100vh;display:flex;justify-content:center;align-items:center;padding:24px}
+    .onboard{max-width:520px;width:100%;padding:48px 40px;background:#141112;border:1px solid rgba(255,235,225,0.06);border-radius:24px}
+    .logo{font-family:'Instrument Serif',serif;font-size:24px;color:#e09070;margin-bottom:8px}
+    .progress{display:flex;gap:6px;margin-bottom:36px}
+    .progress-dot{flex:1;height:3px;border-radius:2px;background:rgba(255,235,225,0.08);transition:background .4s}
+    .progress-dot.active{background:#e09070}
+    .progress-dot.done{background:rgba(224,144,112,0.4)}
+    .step{display:none}
     .step.active{display:block}
-    .step-eyebrow{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent2);margin-bottom:16px}
-    .step-title{font-family:'Playfair Display',serif;font-size:clamp(28px,5vw,40px);font-weight:700;line-height:1.15;margin-bottom:8px}
-    .step-title em{font-style:italic;color:var(--accent)}
-    .step-sub{color:var(--muted2);font-size:15px;margin-bottom:36px;font-weight:300}
-    .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:32px}
-    .cards.three{grid-template-columns:repeat(3,1fr)}
-    .card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:20px 16px;cursor:pointer;transition:all .2s;text-align:center;user-select:none}
-    .card:hover{border-color:var(--muted);transform:translateY(-1px)}
-    .card.selected{border-color:var(--accent);background:rgba(232,213,163,0.05);box-shadow:0 0 20px rgba(232,213,163,0.08)}
-    .card-icon{font-size:28px;margin-bottom:10px;display:block}
-    .card-label{font-size:14px;font-weight:500;margin-bottom:3px}
-    .card-desc{font-size:11px;color:var(--muted)}
-    .multi-note{font-size:12px;color:var(--muted);text-align:center;margin-bottom:24px}
-    .next-btn{width:100%;padding:16px;background:var(--accent);color:#07090f;font-family:'DM Sans',sans-serif;font-weight:600;font-size:15px;border:none;border-radius:12px;cursor:pointer;transition:all .2s}
-    .next-btn:hover{background:var(--accent2);transform:translateY(-1px)}
-    .skip{display:block;text-align:center;margin-top:14px;font-size:13px;color:var(--muted);cursor:pointer;transition:color .2s}
-    .skip:hover{color:var(--muted2)}
-    @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    .step-title{font-family:'Instrument Serif',serif;font-size:28px;margin-bottom:6px}
+    .step-sub{font-size:14px;color:rgba(240,236,232,0.4);margin-bottom:28px}
+    .options{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:28px}
+    .opt{padding:10px 18px;border:1px solid rgba(255,235,225,0.08);border-radius:100px;font-size:13px;cursor:pointer;transition:all .2s;color:rgba(240,236,232,0.6);background:transparent;font-family:'Outfit',sans-serif}
+    .opt:hover{border-color:rgba(224,144,112,0.3);color:#f0ece8}
+    .opt.selected{background:rgba(224,144,112,0.12);border-color:#e09070;color:#e09070}
+    .field{margin-bottom:16px}
+    .field label{display:block;font-size:12px;color:rgba(240,236,232,0.35);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px}
+    .field input{width:100%;padding:12px 16px;background:#0c0a0b;border:1px solid rgba(255,235,225,0.06);border-radius:10px;color:#f0ece8;font-family:'Outfit',sans-serif;font-size:14px}
+    .field input:focus{outline:none;border-color:rgba(224,144,112,0.4)}
+    .field input::placeholder{color:rgba(240,236,232,0.2)}
+    .field-row{display:flex;gap:12px}
+    .field-row .field{flex:1}
+    .wearable-grid{display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
+    .wearable-card{display:flex;align-items:center;gap:16px;padding:16px 20px;border:1px solid rgba(255,235,225,0.06);border-radius:14px;cursor:pointer;transition:all .2s}
+    .wearable-card:hover{border-color:rgba(224,144,112,0.3)}
+    .wearable-card.selected{border-color:#e09070;background:rgba(224,144,112,0.06)}
+    .wearable-card.coming-soon{opacity:0.4;cursor:default}
+    .wearable-name{font-size:15px;font-weight:500}
+    .wearable-tag{font-size:11px;color:rgba(240,236,232,0.3);margin-top:2px}
+    .wearable-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+    .btn-row{display:flex;justify-content:space-between;align-items:center;margin-top:32px}
+    .btn-next{padding:14px 32px;background:#e09070;color:#0c0a0b;border:none;border-radius:100px;font-family:'Outfit',sans-serif;font-weight:500;font-size:14px;cursor:pointer;transition:all .2s}
+    .btn-next:hover{background:#f0a888}
+    .btn-skip{padding:14px 20px;background:transparent;border:none;color:rgba(240,236,232,0.3);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;transition:color .2s}
+    .btn-skip:hover{color:rgba(240,236,232,0.6)}
+    .goal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:28px}
+    .goal-card{padding:20px 16px;border:1px solid rgba(255,235,225,0.06);border-radius:14px;cursor:pointer;transition:all .2s;text-align:center}
+    .goal-card:hover{border-color:rgba(224,144,112,0.3)}
+    .goal-card.selected{border-color:#e09070;background:rgba(224,144,112,0.06)}
+    .goal-emoji{font-size:24px;margin-bottom:8px}
+    .goal-label{font-size:14px;font-weight:500}
   </style>
 </head>
 <body>
-  <div class="orb orb1"></div>
-  <div class="orb orb2"></div>
-  <div class="container">
+  <div class="onboard">
     <div class="logo">VitalMind</div>
     <div class="progress">
       <div class="progress-dot active" id="dot0"></div>
       <div class="progress-dot" id="dot1"></div>
       <div class="progress-dot" id="dot2"></div>
+      <div class="progress-dot" id="dot3"></div>
     </div>
+
     <div class="step active" id="step0">
-      <div class="step-eyebrow">Step 1 of 3</div>
-      <div class="step-title">What's your <em>main goal</em>?</div>
-      <div class="step-sub">We'll tailor every insight to what matters most to you.</div>
-      <div class="cards" id="goals">
-        <div class="card selected" data-value="better_sleep" onclick="selectCard(this,'goals')">
-          <span class="card-icon">😴</span>
-          <div class="card-label">Better Sleep</div>
-          <div class="card-desc">Improve quality & duration</div>
-        </div>
-        <div class="card" data-value="more_energy" onclick="selectCard(this,'goals')">
-          <span class="card-icon">⚡</span>
-          <div class="card-label">More Energy</div>
-          <div class="card-desc">Beat fatigue & brain fog</div>
-        </div>
-        <div class="card" data-value="lose_weight" onclick="selectCard(this,'goals')">
-          <span class="card-icon">🔥</span>
-          <div class="card-label">Lose Weight</div>
-          <div class="card-desc">Smart deficit approach</div>
-        </div>
-        <div class="card" data-value="peak_performance" onclick="selectCard(this,'goals')">
-          <span class="card-icon">🏆</span>
-          <div class="card-label">Peak Performance</div>
-          <div class="card-desc">Train harder, recover faster</div>
-        </div>
+      <div class="step-title">Your health conditions</div>
+      <div class="step-sub">Select any that apply — this shapes every recommendation</div>
+      <div class="options" id="conditionOptions">
+        <button class="opt" data-val="endometriosis">Endometriosis</button>
+        <button class="opt" data-val="pcos">PCOS</button>
+        <button class="opt" data-val="thyroid">Thyroid</button>
+        <button class="opt" data-val="chronic_fatigue">Chronic fatigue</button>
+        <button class="opt" data-val="ibs">IBS</button>
+        <button class="opt" data-val="autoimmune">Autoimmune</button>
+        <button class="opt" data-val="anxiety">Anxiety</button>
+        <button class="opt" data-val="migraine">Migraines</button>
+        <button class="opt" data-val="none">None of these</button>
       </div>
-      <button class="next-btn" onclick="nextStep()">Continue →</button>
+      <div class="step-sub" style="margin-bottom:12px;margin-top:8px">Dietary approach</div>
+      <div class="options" id="dietOptions">
+        <button class="opt" data-val="fodmap">Low FODMAP</button>
+        <button class="opt" data-val="anti_inflammatory">Anti-inflammatory</button>
+        <button class="opt" data-val="gluten_free">Gluten free</button>
+        <button class="opt" data-val="dairy_free">Dairy free</button>
+        <button class="opt" data-val="keto">Keto</button>
+        <button class="opt" data-val="vegan">Vegan</button>
+        <button class="opt" data-val="none">No specific diet</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn-skip" onclick="goStep(1)">Skip</button>
+        <button class="btn-next" onclick="goStep(1)">Continue</button>
+      </div>
     </div>
+
     <div class="step" id="step1">
-      <div class="step-eyebrow">Step 2 of 3</div>
-      <div class="step-title">Anything about <em>your body</em> we should know?</div>
-      <div class="step-sub">Helps VitalMind give you safer, smarter recommendations.</div>
-      <div class="multi-note">Select all that apply</div>
-      <div class="cards three" id="conditions">
-        <div class="card" data-value="endometriosis" onclick="toggleCard(this)"><span class="card-icon">🌸</span><div class="card-label">Endometriosis</div></div>
-        <div class="card" data-value="pcos" onclick="toggleCard(this)"><span class="card-icon">⚖️</span><div class="card-label">PCOS</div></div>
-        <div class="card" data-value="thyroid" onclick="toggleCard(this)"><span class="card-icon">🦋</span><div class="card-label">Thyroid</div></div>
-        <div class="card" data-value="high_stress" onclick="toggleCard(this)"><span class="card-icon">🧠</span><div class="card-label">High Stress</div></div>
-        <div class="card" data-value="chronic_fatigue" onclick="toggleCard(this)"><span class="card-icon">😓</span><div class="card-label">Chronic Fatigue</div></div>
-        <div class="card" data-value="none" onclick="toggleCard(this)"><span class="card-icon">✨</span><div class="card-label">None</div></div>
+      <div class="step-title">About your body</div>
+      <div class="step-sub">Helps calibrate your analysis — all optional</div>
+      <div class="field-row">
+        <div class="field"><label>Age</label><input type="number" id="obAge" placeholder="28"/></div>
+        <div class="field"><label>Weight (lbs)</label><input type="number" id="obWeight" placeholder="140"/></div>
+        <div class="field"><label>Height (inches)</label><input type="number" id="obHeight" placeholder="65"/></div>
       </div>
-      <button class="next-btn" onclick="nextStep()">Continue →</button>
-      <span class="skip" onclick="skipStep()">Skip this step</span>
+      <div class="btn-row">
+        <button class="btn-skip" onclick="goStep(2)">Skip</button>
+        <button class="btn-next" onclick="goStep(2)">Continue</button>
+      </div>
     </div>
+
     <div class="step" id="step2">
-      <div class="step-eyebrow">Step 3 of 3</div>
-      <div class="step-title">Any <em>dietary approach</em>?</div>
-      <div class="step-sub">Last one — we promise.</div>
-      <div class="cards three" id="diet">
-        <div class="card" data-value="fodmap" onclick="toggleCard(this)"><span class="card-icon">🥗</span><div class="card-label">FODMAP</div></div>
-        <div class="card" data-value="vegan" onclick="toggleCard(this)"><span class="card-icon">🌱</span><div class="card-label">Vegan</div></div>
-        <div class="card" data-value="keto" onclick="toggleCard(this)"><span class="card-icon">🥑</span><div class="card-label">Keto</div></div>
-        <div class="card" data-value="intermittent_fasting" onclick="toggleCard(this)"><span class="card-icon">⏱️</span><div class="card-label">Int. Fasting</div></div>
-        <div class="card" data-value="anti_inflammatory" onclick="toggleCard(this)"><span class="card-icon">🫚</span><div class="card-label">Anti-inflammatory</div></div>
-        <div class="card" data-value="none" onclick="toggleCard(this)"><span class="card-icon">🍽️</span><div class="card-label">No restrictions</div></div>
+      <div class="step-title">What's your goal?</div>
+      <div class="step-sub">We'll tailor your daily brief around this</div>
+      <div class="goal-grid" id="goalGrid">
+        <div class="goal-card" data-val="better_sleep" onclick="selectGoal(this)">
+          <div class="goal-emoji">&#128164;</div>
+          <div class="goal-label">Better sleep</div>
+        </div>
+        <div class="goal-card" data-val="more_energy" onclick="selectGoal(this)">
+          <div class="goal-emoji">&#9889;</div>
+          <div class="goal-label">More energy</div>
+        </div>
+        <div class="goal-card" data-val="lose_weight" onclick="selectGoal(this)">
+          <div class="goal-emoji">&#127947;</div>
+          <div class="goal-label">Lose weight</div>
+        </div>
+        <div class="goal-card" data-val="peak_performance" onclick="selectGoal(this)">
+          <div class="goal-emoji">&#128170;</div>
+          <div class="goal-label">Peak performance</div>
+        </div>
       </div>
-      <button class="next-btn" onclick="finish()">See my insights →</button>
-      <span class="skip" onclick="finish()">Skip this step</span>
+      <div class="btn-row">
+        <button class="btn-skip" onclick="goStep(3)">Skip</button>
+        <button class="btn-next" onclick="goStep(3)">Continue</button>
+      </div>
+    </div>
+
+    <div class="step" id="step3">
+      <div class="step-title">Connect your wearable</div>
+      <div class="step-sub">VitalMind works best with your biometric data</div>
+      <div class="wearable-grid">
+        <div class="wearable-card" onclick="selectWearable(this, 'whoop')">
+          <div class="wearable-icon" style="background:rgba(224,144,112,0.1);color:#e09070">W</div>
+          <div><div class="wearable-name">WHOOP</div><div class="wearable-tag">Full integration — connect now</div></div>
+        </div>
+        <div class="wearable-card coming-soon">
+          <div class="wearable-icon" style="background:rgba(240,236,232,0.05);color:rgba(240,236,232,0.3)">O</div>
+          <div><div class="wearable-name">Oura Ring</div><div class="wearable-tag">Coming soon</div></div>
+        </div>
+        <div class="wearable-card coming-soon">
+          <div class="wearable-icon" style="background:rgba(240,236,232,0.05);color:rgba(240,236,232,0.3)">&#9824;</div>
+          <div><div class="wearable-name">Apple Health</div><div class="wearable-tag">Coming soon</div></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-skip" onclick="finishOnboarding('none')">Skip for now</button>
+        <button class="btn-next" id="connectBtn" onclick="finishOnboarding('whoop')" style="display:none">Connect WHOOP</button>
+      </div>
     </div>
   </div>
+
   <script>
-    let currentStep=0;
-    const profile={goal:'better_sleep',conditions:[],diet:[]};
-    const whoopData='__WHOOP_DATA__';
-    function selectCard(el,groupId){
-      document.querySelectorAll('#'+groupId+' .card').forEach(c=>c.classList.remove('selected'));
-      el.classList.add('selected');
-      if(groupId==='goals')profile.goal=el.dataset.value;
+    var currentStep = 0;
+    var selectedConditions = [];
+    var selectedDiet = [];
+    var selectedGoal = '';
+    var selectedWearable = 'none';
+
+    document.querySelectorAll('#conditionOptions .opt').forEach(function(btn) {
+      btn.onclick = function() {
+        if (btn.dataset.val === 'none') {
+          selectedConditions = ['none'];
+          document.querySelectorAll('#conditionOptions .opt').forEach(function(b) { b.classList.remove('selected'); });
+          btn.classList.add('selected');
+        } else {
+          document.querySelector('#conditionOptions .opt[data-val="none"]').classList.remove('selected');
+          selectedConditions = selectedConditions.filter(function(c) { return c !== 'none'; });
+          btn.classList.toggle('selected');
+          if (btn.classList.contains('selected')) {
+            selectedConditions.push(btn.dataset.val);
+          } else {
+            selectedConditions = selectedConditions.filter(function(c) { return c !== btn.dataset.val; });
+          }
+        }
+      };
+    });
+
+    document.querySelectorAll('#dietOptions .opt').forEach(function(btn) {
+      btn.onclick = function() {
+        if (btn.dataset.val === 'none') {
+          selectedDiet = ['none'];
+          document.querySelectorAll('#dietOptions .opt').forEach(function(b) { b.classList.remove('selected'); });
+          btn.classList.add('selected');
+        } else {
+          document.querySelector('#dietOptions .opt[data-val="none"]').classList.remove('selected');
+          selectedDiet = selectedDiet.filter(function(d) { return d !== 'none'; });
+          btn.classList.toggle('selected');
+          if (btn.classList.contains('selected')) {
+            selectedDiet.push(btn.dataset.val);
+          } else {
+            selectedDiet = selectedDiet.filter(function(d) { return d !== btn.dataset.val; });
+          }
+        }
+      };
+    });
+
+    function selectGoal(card) {
+      document.querySelectorAll('.goal-card').forEach(function(c) { c.classList.remove('selected'); });
+      card.classList.add('selected');
+      selectedGoal = card.dataset.val;
     }
-    function toggleCard(el){
-      const value=el.dataset.value;
-      if(value==='none'){el.closest('.cards').querySelectorAll('.card').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');return;}
-      el.closest('.cards').querySelector('[data-value="none"]')?.classList.remove('selected');
-      el.classList.toggle('selected');
+
+    function selectWearable(card, type) {
+      document.querySelectorAll('.wearable-card').forEach(function(c) { c.classList.remove('selected'); });
+      card.classList.add('selected');
+      selectedWearable = type;
+      document.getElementById('connectBtn').style.display = 'block';
     }
-    function nextStep(){
-      if(currentStep===1)profile.conditions=[...document.querySelectorAll('#conditions .card.selected')].map(c=>c.dataset.value);
-      currentStep++;
-      document.querySelectorAll('.step').forEach((s,i)=>s.classList.toggle('active',i===currentStep));
-      document.querySelectorAll('.progress-dot').forEach((d,i)=>{d.classList.toggle('active',i===currentStep);d.classList.toggle('done',i<currentStep);});
+
+    function goStep(n) {
+      document.getElementById('step' + currentStep).classList.remove('active');
+      document.getElementById('step' + n).classList.add('active');
+      for (var i = 0; i < 4; i++) {
+        var dot = document.getElementById('dot' + i);
+        dot.classList.remove('active', 'done');
+        if (i < n) dot.classList.add('done');
+        if (i === n) dot.classList.add('active');
+      }
+      currentStep = n;
+
+      var params = new URLSearchParams(window.location.search);
+      if (n === 3 && params.get('flow') === 'whoop') {
+        finishOnboarding('whoop');
+      }
     }
-    function skipStep(){nextStep();}
-    function finish(){
-      profile.diet=[...document.querySelectorAll('#diet .card.selected')].map(c=>c.dataset.value);
+
+    async function finishOnboarding(wearable) {
+      var age = document.getElementById('obAge').value;
+      var weight = document.getElementById('obWeight').value;
+      var height = document.getElementById('obHeight').value;
+
       try {
-        const profileStr=JSON.stringify(profile);
-        const profileEncoded=btoa(unescape(encodeURIComponent(profileStr)));
-        window.location.href='/insights?data='+whoopData+'&profile='+profileEncoded;
-      } catch(e) {
-        window.location.href='/insights?data='+whoopData;
+        await fetch('/api/onboarding', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            conditions: selectedConditions.length > 0 ? selectedConditions : null,
+            diet: selectedDiet.length > 0 ? selectedDiet : null,
+            goal: selectedGoal || null,
+            age: age ? parseInt(age) : null,
+            weight_kg: weight ? (parseFloat(weight) * 0.453592) : null,
+            height_cm: height ? (parseFloat(height) * 2.54) : null,
+            wearable: wearable,
+            brief_hour: 7
+          })
+        });
+      } catch(e) {}
+
+      if (wearable === 'whoop') {
+        window.location.href = '/connect-whoop';
+      } else {
+        window.location.href = '/dashboard';
       }
     }
   </script>

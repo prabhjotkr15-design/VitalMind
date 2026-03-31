@@ -156,6 +156,16 @@
     .bt-saved{font-size:12px;color:#4ade80;opacity:0;transition:opacity .3s}
     .bt-saved.show{opacity:1}
 
+  
+    .checklist{background:#141112;border:1px solid rgba(255,235,225,0.06);border-radius:20px;padding:28px 32px;margin-bottom:28px}
+    .cl-title{font-family:'Instrument Serif',serif;font-size:20px;color:#f0ece8;margin-bottom:16px}
+    .cl-items{display:flex;flex-direction:column;gap:12px}
+    .cl-item{display:flex;align-items:center;gap:12px;font-size:14px;color:rgba(240,236,232,0.35);padding:12px 16px;background:#0c0a0b;border-radius:10px;cursor:pointer;transition:all .2s}
+    .cl-item:hover{border-color:rgba(224,144,112,0.2)}
+    .cl-item.done{color:rgba(240,236,232,0.6)}
+    .cl-item.done .cl-check{color:#4ade80}
+    .cl-check{font-size:16px;min-width:20px}
+
   </style>
 </head>
 <body>
@@ -192,6 +202,17 @@
     <div class="insight-card">__INSIGHT__</div>
     
     
+    
+    <div class="checklist" id="checklist" style="display:none">
+      <div class="cl-title">Getting started</div>
+      <div class="cl-items">
+        <div class="cl-item done" id="clAccount"><span class="cl-check">&#10003;</span> Account created</div>
+        <div class="cl-item" id="clProfile"><span class="cl-check">&#9675;</span> Tell us about your health</div>
+        <div class="cl-item" id="clWearable"><span class="cl-check">&#9675;</span> Connect a wearable</div>
+        <div class="cl-item" id="clMeal"><span class="cl-check">&#9675;</span> Log your first meal</div>
+      </div>
+    </div>
+
     <div class="brief-time-section">
       <div class="bt-label">Morning brief at</div>
       <select class="bt-select" id="briefTimeSelect" onchange="updateBriefTime(this.value)">
@@ -512,6 +533,36 @@
       } catch(e) {}
     }
     loadBriefTime();
+
+  
+    async function checkOnboardingState() {
+      try {
+        var res = await fetch('/api/onboarding-state');
+        var state = await res.json();
+        if (state.needsSetup) {
+          document.getElementById('checklist').style.display = 'block';
+          if (state.hasProfile) {
+            document.getElementById('clProfile').classList.add('done');
+            document.getElementById('clProfile').querySelector('.cl-check').innerHTML = '&#10003;';
+          } else {
+            document.getElementById('clProfile').onclick = function() { window.location.href = '/onboarding'; };
+          }
+          if (state.hasWearable) {
+            document.getElementById('clWearable').classList.add('done');
+            document.getElementById('clWearable').querySelector('.cl-check').innerHTML = '&#10003;';
+          } else {
+            document.getElementById('clWearable').onclick = function() { window.location.href = '/connect-whoop'; };
+          }
+          if (state.hasMeals) {
+            document.getElementById('clMeal').classList.add('done');
+            document.getElementById('clMeal').querySelector('.cl-check').innerHTML = '&#10003;';
+          } else {
+            document.getElementById('clMeal').onclick = function() { document.getElementById('foodFab').click(); };
+          }
+        }
+      } catch(e) {}
+    }
+    checkOnboardingState();
 
   </script>
 

@@ -488,6 +488,59 @@ app.get('/api/brief-time-current', async (req, res) => {
   res.json({ hour: data?.brief_hour ?? 7 });
 });
 
+
+app.get('/onboarding', (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.redirect('/auth');
+  res.send(getPage('onboarding.html'));
+});
+
+app.post('/api/onboarding', async (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not logged in' });
+  try {
+    const { createClient: cc } = await import('@supabase/supabase-js');
+    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const data = {
+      user_id: user.userId,
+      conditions: req.body.conditions,
+      diet: req.body.diet,
+      goal: req.body.goal,
+      age: req.body.age,
+      weight_kg: req.body.weight_kg,
+      height_cm: req.body.height_cm,
+      wearable: req.body.wearable || 'none',
+      brief_hour: req.body.brief_hour || 7,
+      onboarding_complete: true
+    };
+    await sb.from('user_profiles').upsert(data, { onConflict: 'user_id' });
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+app.get('/api/onboarding-state', async (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not logged in' });
+  try {
+    const { createClient: cc } = await import('@supabase/supabase-js');
+    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const { data: profile } = await sb.from('user_profiles').select().eq('user_id', user.userId).single();
+    const { data: tokens } = await sb.from('whoop_tokens').select('user_id').eq('user_id', user.userId).single();
+    const today = new Date(Date.now() - 7*60*60*1000).toISOString().split('T')[0];
+    const { data: meals } = await sb.from('food_logs').select('id').eq('user_id', user.userId).limit(1);
+    const hasProfile = profile?.onboarding_complete === true;
+    const hasWearable = !!tokens;
+    const hasMeals = meals && meals.length > 0;
+    const needsSetup = !hasProfile || !hasWearable || !hasMeals;
+    res.json({ needsSetup, hasProfile, hasWearable, hasMeals });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/logout', (req, res) => {
   res.clearCookie('vm_token');
   res.redirect('/');
