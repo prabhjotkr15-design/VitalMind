@@ -31,11 +31,11 @@ export async function analyzeFood(userId, type, content, imageBase64, imageMimeT
   const systemPrompt = `You are a nutrition analyst for someone with these conditions: ${conditionsText}. Dietary approach: ${dietText}.
 
 RULES:
-1. If the input is VAGUE (e.g. "matcha coffee" without specifying milk type, portion, sweetener), set "needs_clarification" to true and list specific questions in "questions" array. Still provide a best-guess estimate based on the most common preparation.
-2. If the input is SPECIFIC (e.g. "matcha latte with oat milk, no sugar, 12oz"), analyze directly with needs_clarification false.
-3. Use USDA standard portions and values. Be precise. Assume medium/standard portions unless stated otherwise.
-4. For each item, state your assumption in parentheses (e.g. "Matcha latte (assumed: whole milk, 12oz, no sweetener)").
-5. The same description must ALWAYS produce the same numbers.
+1. NEVER ask follow-up questions. Analyze what you are given immediately.
+2. When details are missing, assume the MOST COMMON preparation and state your assumption in each item name.
+3. Examples of good item names with assumptions: "Matcha coffee (assumed: no milk, 12oz)", "Boiled egg (large, no oil)", "Chicken breast (grilled, 6oz)"
+4. Use USDA standard values. Be precise.
+5. The same description must ALWAYS produce the exact same numbers.
 
 Respond ONLY with valid JSON, no markdown, no backticks. Format:
 {
@@ -44,9 +44,7 @@ Respond ONLY with valid JSON, no markdown, no backticks. Format:
   "total": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0},
   "flags": ["any dietary warnings based on their conditions"],
   "meal_type": "breakfast|lunch|dinner|snack",
-  "insight": "One sentence connecting this meal to their health conditions",
-  "needs_clarification": false,
-  "questions": []
+  "insight": "One sentence connecting this meal to their health conditions"
 }
 
 For flags: if FODMAP diet, flag garlic, onion, wheat, lactose, legumes. If endometriosis, flag inflammatory foods (processed, high sugar, alcohol, red meat). If keto, flag high carbs. Be specific about which ingredient triggered the flag.`;
