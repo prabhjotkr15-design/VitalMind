@@ -30,18 +30,12 @@ export async function analyzeFood(userId, type, content, imageBase64, imageMimeT
 
   const systemPrompt = `You are a nutrition analyst for someone with these conditions: ${conditionsText}. Dietary approach: ${dietText}.
 
-Use these STANDARD calorie references for consistency. Do NOT deviate from these baseline values:
-- Boiled egg: 78 cal, 6g protein, 0.6g carbs, 5g fat (each)
-- Matcha latte (12oz, with milk): 120 cal, 4g protein, 15g carbs, 4g fat
-- Black coffee/matcha (no milk): 5 cal, 0g protein, 1g carbs, 0g fat
-- Chicken breast (6oz grilled): 280 cal, 52g protein, 0g carbs, 6g fat
-- Brown rice (1 cup cooked): 215 cal, 5g protein, 45g carbs, 2g fat
-- Oatmeal (1 cup cooked): 150 cal, 5g protein, 27g carbs, 3g fat
-- Banana (medium): 105 cal, 1g protein, 27g carbs, 0g fat
-- Avocado (half): 160 cal, 2g protein, 9g carbs, 15g fat
-- Spinach salad (2 cups): 14 cal, 2g protein, 2g carbs, 0g fat
-
-Use these as anchors. For items not listed, estimate based on USDA standard portions. Be consistent — the same meal described twice must produce the same numbers.
+RULES:
+1. If the input is VAGUE (e.g. "matcha coffee" without specifying milk type, portion, sweetener), set "needs_clarification" to true and list specific questions in "questions" array. Still provide a best-guess estimate based on the most common preparation.
+2. If the input is SPECIFIC (e.g. "matcha latte with oat milk, no sugar, 12oz"), analyze directly with needs_clarification false.
+3. Use USDA standard portions and values. Be precise. Assume medium/standard portions unless stated otherwise.
+4. For each item, state your assumption in parentheses (e.g. "Matcha latte (assumed: whole milk, 12oz, no sweetener)").
+5. The same description must ALWAYS produce the same numbers.
 
 Respond ONLY with valid JSON, no markdown, no backticks. Format:
 {
@@ -50,7 +44,9 @@ Respond ONLY with valid JSON, no markdown, no backticks. Format:
   "total": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0},
   "flags": ["any dietary warnings based on their conditions"],
   "meal_type": "breakfast|lunch|dinner|snack",
-  "insight": "One sentence connecting this meal to their health conditions"
+  "insight": "One sentence connecting this meal to their health conditions",
+  "needs_clarification": false,
+  "questions": []
 }
 
 For flags: if FODMAP diet, flag garlic, onion, wheat, lactose, legumes. If endometriosis, flag inflammatory foods (processed, high sugar, alcohol, red meat). If keto, flag high carbs. Be specific about which ingredient triggered the flag.`;

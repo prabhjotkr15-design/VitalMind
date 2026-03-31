@@ -100,10 +100,15 @@ export async function handleIncoming(req, res) {
     }
 
     const flags = result.flags && result.flags.length > 0 ? '\n\n⚠️ ' + result.flags.join('\n⚠️ ') : '';
+
+    const clarify = result.needs_clarification && result.questions && result.questions.length > 0
+      ? '\n\n🤔 For a more accurate estimate, can you tell me:\n• ' + result.questions.join('\n• ')
+      : '';
     const reply = '✅ Logged: ' + result.description +
       '\n\n🔢 ' + result.total.calories + ' cal | P ' + result.total.protein + 'g | C ' + result.total.carbs + 'g | F ' + result.total.fat + 'g' +
       flags +
-      (result.insight ? '\n\n💡 ' + result.insight : '');
+      (result.insight ? '\n\n💡 ' + result.insight : '') +
+      clarify;
 
     const twiml = '<Response><Message>' + reply + '</Message></Response>';
     res.type('text/xml').send(twiml);
