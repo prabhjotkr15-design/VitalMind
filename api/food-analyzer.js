@@ -71,17 +71,33 @@ For flags: if FODMAP diet, flag garlic, onion, wheat, lactose, legumes. If endom
     parsed = { description: raw, items: [], total: { calories: 0, protein: 0, carbs: 0, fat: 0 }, flags: [], meal_type: 'snack', insight: '' };
   }
 
+  // Calculate totals from items to avoid Claude inconsistencies
+  let calculatedTotal;
+  if (parsed.items && parsed.items.length > 0) {
+    calculatedTotal = parsed.items.reduce((acc, item) => ({
+      calories: acc.calories + (item.calories || 0),
+      protein: acc.protein + (item.protein || 0),
+      carbs: acc.carbs + (item.carbs || 0),
+      fat: acc.fat + (item.fat || 0)
+    }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+  } else {
+    calculatedTotal = parsed.total || { calories: 0, protein: 0, carbs: 0, fat: 0 };
+  }
+
+  parsed.total = calculatedTotal;
+
   await supabase.from('food_logs').insert({
     user_id: userId,
     meal_type: autoMealType,
     description: parsed.description,
-    calories: parsed.total?.calories || 0,
-    protein: parsed.total?.protein || 0,
-    carbs: parsed.total?.carbs || 0,
-    fat: parsed.total?.fat || 0,
+    calories: calculatedTotal.calories,
+    protein: calculatedTotal.protein,
+    carbs: calculatedTotal.carbs,
+    fat: calculatedTotal.fat,
     flags: parsed.flags || [],
     raw_input: type === 'photo' ? 'photo upload' : content,
   });
 
+  parsed.meal_type = autoMealType;
   return parsed;
 }
