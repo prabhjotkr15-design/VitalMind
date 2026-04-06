@@ -5,6 +5,12 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANO
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 const FROM = process.env.TWILIO_WHATSAPP_NUMBER;
 
+const templates = {
+  breakfast: 'HXa3abb6f2976a3ad9aab76940fb68544e',
+  lunch: 'HXd148e7e54aefbfc80d63a1c668fa9c1e',
+  dinner: 'HX39d81c7ea8d02a6cd07fb2bf6524d6bb'
+};
+
 export default async function handler(req, res) {
   const authHeader = req.headers.authorization;
   if (authHeader !== 'Bearer ' + process.env.CRON_SECRET) {
@@ -12,14 +18,8 @@ export default async function handler(req, res) {
   }
 
   const mealType = req.body?.meal || 'meal';
-
-  const messages = {
-    breakfast: "Good morning! ☀️ Time to log your breakfast. Send a photo of your plate, a voice note, or just type what you had.",
-    lunch: "Hey! 🍽️ Don't forget to log your lunch. Photo, voice, or text — takes 10 seconds.",
-    dinner: "Evening! 🌙 Time to log your dinner. The more VitalMind knows about what you eat, the smarter your morning brief gets."
-  };
-
-  const msg = messages[mealType] || messages.lunch;
+  const templateSid = templates[mealType];
+  if (!templateSid) return res.status(400).json({ error: 'Invalid meal type' });
 
   const now = new Date();
   const pst = new Date(now.getTime() - 7 * 60 * 60 * 1000);
@@ -49,7 +49,7 @@ export default async function handler(req, res) {
         if (alreadyLogged) { skipped++; continue; }
 
         await twilioClient.messages.create({
-          body: msg,
+          contentSid: templateSid,
           from: FROM,
           to: 'whatsapp:' + user.phone
         });
