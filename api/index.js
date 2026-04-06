@@ -553,6 +553,11 @@ app.get('/api/onboarding-state', async (req, res) => {
   }
 });
 
+app.post('/api/pattern-detective', async (req, res) => {
+  const handler = (await import('./pattern-detective.js')).default;
+  return handler(req, res);
+});
+
 app.get('/logout', (req, res) => {
   res.clearCookie('vm_token');
   res.redirect('/');
