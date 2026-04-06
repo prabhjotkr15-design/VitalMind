@@ -25,25 +25,32 @@ async function askClarification(foodDescription, conditions, diet) {
       temperature: 0,
       messages: [{
         role: 'user',
-        content: `You are a nutrition assistant. The user described their meal as: "${foodDescription}"
-
+        content: `The user described their meal as: "${foodDescription}"
 Their health conditions: ${conditions}. Diet: ${diet}.
-
-Ask 2-4 SHORT, specific clarifying questions about this EXACT meal to get accurate calorie estimates. Focus on:
-- Portion sizes (how much/how many)
-- Preparation method (if unclear)
-- Key ingredients that affect calories (milk type, oil, sweetener, sauce)
-
+Ask 2-3 SHORT clarifying questions about this EXACT meal. Focus on portion size, preparation method, and key ingredients that affect calories.
 DO NOT ask about items they already specified clearly.
-DO NOT repeat what they told you.
-Keep questions short — one line each.
-
-Respond ONLY with the questions as a numbered list. Nothing else. No greeting, no preamble.`
+Respond ONLY with a numbered list of questions. Nothing else.`
       }]
     },
     { headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' } }
   );
   return res.data.content[0].text;
+}
+
+async function transcribeAudio(mediaUrl) {
+  const axios = (await import('axios')).default;
+  const audioRes = await axios.get(mediaUrl, {
+    responseType: 'arraybuffer',
+    auth: { username: process.env.TWILIO_ACCOUNT_SID, password: process.env.TWILIO_AUTH_TOKEN }
+  });
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const audioBuffer = Buffer.from(audioRes.data);
+  const file = new File([audioBuffer], 'voice.ogg', { type: 'audio/ogg' });
+  const transcription = await openai.audio.transcriptions.create({
+    file: file,
+    model: 'whisper-1',
+  });
+  return transcription.text;
 }
 
 export async function handleIncoming(req, res) {
@@ -74,30 +81,30 @@ export async function handleIncoming(req, res) {
   const dietText = profile?.diet?.filter(d => d !== 'none').join(', ') || 'none';
 
   try {
-    // Check if there is a pending meal waiting for clarification
-    const { data: pending } = await supabase
+    // Check for pending meal waiting for clarification
+    const { data: pendingRows } = await supabase
       .from('pending_meals')
       .select()
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1);
 
-    const hasPending = pending && pending.length > 0;
-    const pendingAge = hasPending ? (Date.now() - new Date(pending[0].created_at).getTime()) / 60000 : 999;
+    const pending = pendingRows && pendingRows.length > 0 ? pendingRows[0] : null;
+    const pendingAge = pending ? (Date.now() - new Date(pending.created_at).getTime()) / 60000 : 999;
 
-    // If there is a recent pending meal (less than 30 min old) and user sent text, treat as clarification answers
-    if (hasPending && pendingAge < 30 && numMedia === 0 && body.trim()) {
-      const combined = pending[0].original_input + '. Additional details: ' + body.trim();
+    // STEP 2: User is answering clarification questions
+    if (pending && pendingAge < 30 && numMedia === 0 && body.trim()) {
+      const combined = pending.original_input + '. Additional details from user: ' + body.trim();
+
+      // Delete pending FIRST to prevent loops
+      await supabase.from('pending_meals').delete().eq('user_id', user.id);
 
       let result;
-      if (pending[0].input_type === 'photo' && pending[0].image_base64) {
-        result = await analyzeFood(user.id, 'photo', combined, pending[0].image_base64, pending[0].image_mime, profile);
+      if (pending.input_type === 'photo' && pending.image_base64) {
+        result = await analyzeFood(user.id, 'photo', combined, pending.image_base64, pending.image_mime, profile);
       } else {
         result = await analyzeFood(user.id, 'text', combined, null, null, profile);
       }
-
-      // Delete pending meal
-      await supabase.from('pending_meals').delete().eq('user_id', user.id);
 
       const flags = result.flags && result.flags.length > 0 ? '\n\n⚠️ ' + result.flags.join('\n⚠️ ') : '';
       const reply = '✅ Logged: ' + result.description +
@@ -110,7 +117,7 @@ export async function handleIncoming(req, res) {
       return;
     }
 
-    // New meal input — store as pending and ask questions
+    // STEP 1: New meal input
     let originalInput = '';
     let inputType = 'text';
     let imageBase64 = null;
@@ -131,29 +138,13 @@ export async function handleIncoming(req, res) {
         inputType = 'photo';
         originalInput = body.trim() || 'Photo of meal';
       } else if (mediaType && (mediaType.startsWith('audio/') || mediaType.includes('ogg'))) {
-        const axios = (await import('axios')).default;
-        const audioRes = await axios.get(mediaUrl, {
-          responseType: 'arraybuffer',
-          auth: { username: process.env.TWILIO_ACCOUNT_SID, password: process.env.TWILIO_AUTH_TOKEN }
-        });
-
-        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-        const audioBuffer = Buffer.from(audioRes.data);
-        const file = new File([audioBuffer], 'voice.ogg', { type: mediaType });
-
-        const transcription = await openai.audio.transcriptions.create({
-          file: file,
-          model: 'whisper-1',
-        });
-
-        const transcribedText = transcription.text;
-        if (!transcribedText || transcribedText.trim().length === 0) {
+        const transcribed = await transcribeAudio(req.body.MediaUrl0);
+        if (!transcribed || transcribed.trim().length === 0) {
           const twiml = '<Response><Message>Sorry, I could not understand the voice note. Try sending a text message or photo instead.</Message></Response>';
           res.type('text/xml').send(twiml);
           return;
         }
-
-        originalInput = transcribedText.trim();
+        originalInput = transcribed.trim();
         inputType = 'text';
       } else {
         const twiml = '<Response><Message>Send a photo of your meal, a voice note, or describe it in text!</Message></Response>';
@@ -169,7 +160,7 @@ export async function handleIncoming(req, res) {
       return;
     }
 
-    // Clear any old pending meals for this user
+    // Clear any old pending meals
     await supabase.from('pending_meals').delete().eq('user_id', user.id);
 
     // Store as pending
@@ -183,7 +174,7 @@ export async function handleIncoming(req, res) {
 
     // Ask clarification questions
     const questions = await askClarification(originalInput, conditionsText, dietText);
-    const twiml = '<Response><Message>Got it — ' + originalInput + '\n\nQuick questions for accuracy:\n' + questions + '\n\nReply with your answers and I will log it!</Message></Response>';
+    const twiml = '<Response><Message>Got it — ' + originalInput + '\n\nQuick questions for accuracy:\n' + questions + '\n\nReply with your answers and I\'ll log it!</Message></Response>';
     res.type('text/xml').send(twiml);
 
   } catch(err) {
