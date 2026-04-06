@@ -1,4 +1,5 @@
 import twilio from 'twilio';
+import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 import { analyzeFood } from './food-analyzer.js';
 
@@ -129,8 +130,33 @@ export async function handleIncoming(req, res) {
         imageMime = mediaType;
         inputType = 'photo';
         originalInput = body.trim() || 'Photo of meal';
+      } else if (mediaType && (mediaType.startsWith('audio/') || mediaType.includes('ogg'))) {
+        const axios = (await import('axios')).default;
+        const audioRes = await axios.get(mediaUrl, {
+          responseType: 'arraybuffer',
+          auth: { username: process.env.TWILIO_ACCOUNT_SID, password: process.env.TWILIO_AUTH_TOKEN }
+        });
+
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        const audioBuffer = Buffer.from(audioRes.data);
+        const file = new File([audioBuffer], 'voice.ogg', { type: mediaType });
+
+        const transcription = await openai.audio.transcriptions.create({
+          file: file,
+          model: 'whisper-1',
+        });
+
+        const transcribedText = transcription.text;
+        if (!transcribedText || transcribedText.trim().length === 0) {
+          const twiml = '<Response><Message>Sorry, I could not understand the voice note. Try sending a text message or photo instead.</Message></Response>';
+          res.type('text/xml').send(twiml);
+          return;
+        }
+
+        originalInput = transcribedText.trim();
+        inputType = 'text';
       } else {
-        const twiml = '<Response><Message>Send a photo of your meal or describe it in text!</Message></Response>';
+        const twiml = '<Response><Message>Send a photo of your meal, a voice note, or describe it in text!</Message></Response>';
         res.type('text/xml').send(twiml);
         return;
       }
