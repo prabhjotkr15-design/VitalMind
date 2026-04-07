@@ -93,8 +93,11 @@ For flags: if FODMAP diet, flag garlic, onion, wheat, lactose, legumes. If endom
 
   parsed.total = calculatedTotal;
 
-  // Guardrail: zero calories means it was not food
-  if (calculatedTotal.calories === 0) {
+  // Guardrail: detect when Claude could not identify food
+  const desc = (parsed.description || "").toLowerCase();
+  const junkPhrases = ["unclear", "unidentif", "unrecogni", "numeric", "numerical", "no recogni", "no meal", "insufficient", "cannot identify", "unable to", "not food", "no food"];
+  const looksLikeJunk = junkPhrases.some(p => desc.includes(p));
+  if (looksLikeJunk) {
     const err = new Error("NOT_FOOD");
     err.code = "NOT_FOOD";
     throw err;
