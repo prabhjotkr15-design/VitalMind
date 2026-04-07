@@ -56,7 +56,12 @@ app.post('/api/auth/signup', async (req, res) => {
     const { createClient: cc } = await import('@supabase/supabase-js');
     const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
     if (phone) {
-      await sb.from('users').update({ phone: phone.replace(/[\s-]/g, '') }).eq('id', userId);
+      let cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
+      if (!cleanPhone.startsWith('+')) {
+        if (cleanPhone.length === 10) cleanPhone = '+1' + cleanPhone;
+        else cleanPhone = '+' + cleanPhone;
+      }
+      await sb.from('users').update({ phone: cleanPhone }).eq('id', userId);
     }
     await sb.from('user_profiles').upsert({ user_id: userId, brief_hour: 7 }, { onConflict: 'user_id' });
     const profile = req.body.profile;

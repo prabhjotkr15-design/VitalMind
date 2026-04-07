@@ -52,7 +52,6 @@ async function askClarification(foodDescription, conditions, diet) {
 }
 
 async function processSymptomReply(user, body, res) {
-  console.log('SYMPTOM ROUTE entered, body:', body);
   const text = body.trim().toLowerCase();
 
   if (text === 'skip') {
@@ -150,8 +149,6 @@ async function processNewMeal(user, body, numMedia, req, profile, conditionsText
 }
 
 export async function handleIncoming(req, res) {
-  console.log('WHATSAPP_VERSION_V7_SYMPTOM_INPUTTYPE');
-  console.log('WA HIT:', req.body.From, '|body:', req.body.Body, '|media:', req.body.NumMedia);
   const body = req.body.Body || '';
   const from = req.body.From || '';
   const numMedia = parseInt(req.body.NumMedia || '0');
@@ -176,8 +173,6 @@ export async function handleIncoming(req, res) {
       .limit(1);
 
     const pending = pendingRows && pendingRows.length > 0 ? pendingRows[0] : null;
-    console.log('V8_PENDING_RAW:', JSON.stringify(pending));
-    console.log('V8_INPUT_TYPE:', pending?.input_type, 'EQ_SYMPTOM:', pending?.input_type === 'symptom');
     const pendingAge = pending ? (Date.now() - new Date(pending.created_at).getTime()) / 60000 : 999;
 
     // ROUTE 1: Symptom check-in reply (text only, within 12 hours)
