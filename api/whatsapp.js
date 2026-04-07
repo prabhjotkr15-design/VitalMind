@@ -178,12 +178,12 @@ export async function handleIncoming(req, res) {
     const pendingAge = pending ? (Date.now() - new Date(pending.created_at).getTime()) / 60000 : 999;
 
     // ROUTE 1: Symptom check-in reply (text only, within 12 hours)
-    if (pending && pending.original_input === 'SYMPTOM_CHECKIN' && numMedia === 0 && body.trim() && pendingAge < 720) {
+    if (pending && pending.input_type === 'symptom' && numMedia === 0 && body.trim() && pendingAge < 720) {
       return await processSymptomReply(user, body, res);
     }
 
     // ROUTE 2: Food clarification reply (text only, within 30 min)
-    if (pending && pending.original_input !== 'SYMPTOM_CHECKIN' && pending.input_type !== 'symptom' && numMedia === 0 && body.trim() && pendingAge < 30) {
+    if (pending && pending.input_type !== 'symptom' && numMedia === 0 && body.trim() && pendingAge < 30) {
       return await processFoodClarificationReply(user, pending, body, profile, res);
     }
 
