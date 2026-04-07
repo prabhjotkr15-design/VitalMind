@@ -54,7 +54,7 @@ app.post('/api/auth/signup', async (req, res) => {
     const { token, userId } = await signup(email, password);
     const phone = req.body.phone;
     const { createClient: cc } = await import('@supabase/supabase-js');
-    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
     if (phone) {
       let cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
       if (!cleanPhone.startsWith('+')) {
@@ -360,7 +360,7 @@ app.post('/api/auth/request-reset', async (req, res) => {
     const { email } = req.body;
     if (!email) throw new Error('Email required');
     const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
     const { data: user } = await supabase.from('users').select().eq('email', email).single();
     if (!user) { console.log('RESET DEBUG: no user found for email:', email); res.json({ ok: true }); return; }
     console.log('RESET DEBUG: user found, sending email to:', email);
@@ -391,7 +391,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
     if (!token || !password) throw new Error('Token and password required');
     if (password.length < 8) throw new Error('Password must be at least 8 characters');
     const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
     const { data: resetToken } = await supabase.from('reset_tokens').select().eq('token', token).eq('used', false).single();
     if (!resetToken) throw new Error('Invalid or expired reset link');
     if (new Date(resetToken.expires_at) < new Date()) throw new Error('Reset link has expired');
@@ -443,7 +443,7 @@ app.get('/api/meals/today', async (req, res) => {
   if (!user) return res.status(401).json({ error: 'Not logged in' });
   try {
     const { createClient } = await import('@supabase/supabase-js');
-    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
     const now = new Date();
     const pst = new Date(now.getTime() - 7 * 60 * 60 * 1000);
     const today = pst.toISOString().split('T')[0];
@@ -490,7 +490,7 @@ app.post('/api/brief-time', async (req, res) => {
   const hour = parseInt(req.body.hour);
   if (isNaN(hour) || hour < 6 || hour > 10) return res.status(400).json({ error: 'Hour must be 6-10' });
   const { createClient: cc } = await import('@supabase/supabase-js');
-  const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+  const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
   await sb.from('user_profiles').update({ brief_hour: hour }).eq('user_id', user.userId);
   res.json({ ok: true, hour });
 });
@@ -500,7 +500,7 @@ app.get('/api/brief-time-current', async (req, res) => {
   const user = getUser(req);
   if (!user) return res.status(401).json({ error: 'Not logged in' });
   const { createClient: cc } = await import('@supabase/supabase-js');
-  const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+  const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
   const { data } = await sb.from('user_profiles').select('brief_hour').eq('user_id', user.userId).single();
   res.json({ hour: data?.brief_hour ?? 7 });
 });
@@ -517,7 +517,7 @@ app.post('/api/onboarding', async (req, res) => {
   if (!user) return res.status(401).json({ error: 'Not logged in' });
   try {
     const { createClient: cc } = await import('@supabase/supabase-js');
-    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
     const data = {
       user_id: user.userId,
       conditions: req.body.conditions,
@@ -544,7 +544,7 @@ app.get('/api/onboarding-state', async (req, res) => {
   if (!user) return res.status(401).json({ error: 'Not logged in' });
   try {
     const { createClient: cc } = await import('@supabase/supabase-js');
-    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
     const { data: profile } = await sb.from('user_profiles').select().eq('user_id', user.userId).single();
     const { data: tokens } = await sb.from('whoop_tokens').select('user_id').eq('user_id', user.userId).single();
     const today = new Date(Date.now() - 7*60*60*1000).toISOString().split('T')[0];
@@ -570,7 +570,7 @@ app.get('/api/symptom-prefs', async (req, res) => {
   if (!user) return res.status(401).json({ error: 'Not logged in' });
   try {
     const { createClient: cc } = await import('@supabase/supabase-js');
-    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
     const { data } = await sb.from('user_profiles').select('symptom_method, symptom_time').eq('user_id', user.userId).single();
     res.json({ method: data?.symptom_method, time: data?.symptom_time || 21 });
   } catch(e) {
@@ -585,7 +585,7 @@ app.post('/api/symptom-prefs', async (req, res) => {
   if (!['whatsapp', 'dashboard', 'off'].includes(method)) return res.status(400).json({ error: 'Invalid method' });
   try {
     const { createClient: cc } = await import('@supabase/supabase-js');
-    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
     await sb.from('user_profiles').update({ symptom_method: method }).eq('user_id', user.userId);
     res.json({ ok: true, method });
   } catch(e) {
@@ -605,7 +605,7 @@ app.post('/api/symptoms', async (req, res) => {
   if (!user) return res.status(401).json({ error: 'Not logged in' });
   try {
     const { createClient: cc } = await import('@supabase/supabase-js');
-    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
     await sb.from('symptom_logs').insert({
       user_id: user.userId,
       pain: req.body.pain,
@@ -624,7 +624,7 @@ app.get('/api/symptoms/today', async (req, res) => {
   if (!user) return res.status(401).json({ error: 'Not logged in' });
   try {
     const { createClient: cc } = await import('@supabase/supabase-js');
-    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
     const now = new Date();
     const pst = new Date(now.getTime() - 7 * 60 * 60 * 1000);
     const today = pst.toISOString().split('T')[0];
