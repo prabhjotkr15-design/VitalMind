@@ -52,6 +52,7 @@ async function askClarification(foodDescription, conditions, diet) {
 }
 
 async function processSymptomReply(user, body, res) {
+  console.log('SYMPTOM ROUTE entered, body:', body);
   const text = body.trim().toLowerCase();
 
   if (text === 'skip') {
@@ -149,6 +150,7 @@ async function processNewMeal(user, body, numMedia, req, profile, conditionsText
 }
 
 export async function handleIncoming(req, res) {
+  console.log('WA HIT:', req.body.From, '|body:', req.body.Body, '|media:', req.body.NumMedia);
   const body = req.body.Body || '';
   const from = req.body.From || '';
   const numMedia = parseInt(req.body.NumMedia || '0');
