@@ -92,6 +92,7 @@ export async function handleIncoming(req, res) {
     const pending = pendingRows && pendingRows.length > 0 ? pendingRows[0] : null;
     const pendingAge = pending ? (Date.now() - new Date(pending.created_at).getTime()) / 60000 : 999;
 
+    console.log("PENDING:", JSON.stringify(pending));
     // STEP 1.5: Handle symptom check-in reply
     if (pending && pending.original_input === 'SYMPTOM_CHECKIN' && pendingAge < 720 && numMedia === 0 && body.trim()) {
       const text = body.trim().toLowerCase();
