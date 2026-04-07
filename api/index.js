@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { createRequire } from 'module';
 import { signup, login, saveWhoopTokens, getWhoopTokens, saveProfile, getProfile, verifyToken, refreshWhoopToken } from './auth.js';
+import { signupLimiter, loginLimiter, resetLimiter, foodAnalysisLimiter, checkRateLimit, getClientId } from './rate-limit.js';
 const require = createRequire(import.meta.url);
 const pdfParse = require('pdf-parse');
 
@@ -47,6 +48,11 @@ app.get('/', (req, res) => {
 app.get('/auth', (req, res) => res.send(getPage('auth.html')));
 
 app.post('/api/auth/signup', async (req, res) => {
+  const rlId = getClientId(req);
+  const rl = await checkRateLimit(signupLimiter, rlId);
+  if (!rl.success) {
+    return res.status(429).json({ error: 'Too many signup attempts. Try again in an hour.' });
+  }
   try {
     const { email, password } = req.body;
     if (!email || !password) throw new Error('Email and password required');
@@ -78,6 +84,11 @@ app.post('/api/auth/signup', async (req, res) => {
 });
 
 app.post('/api/auth/login', async (req, res) => {
+  const rlId = getClientId(req);
+  const rl = await checkRateLimit(loginLimiter, rlId);
+  if (!rl.success) {
+    return res.status(429).json({ error: 'Too many login attempts. Try again in a minute.' });
+  }
   try {
     const { email, password } = req.body;
     if (!email || !password) throw new Error('Email and password required');
@@ -355,15 +366,18 @@ app.post('/analyze-workout', upload.single('file'), async (req, res) => {
 app.get('/reset-password', (req, res) => res.send(getPage('reset.html')));
 
 app.post('/api/auth/request-reset', async (req, res) => {
-  console.log('RESET ROUTE HIT:', req.body);
+  const rlId = getClientId(req);
+  const rl = await checkRateLimit(resetLimiter, rlId);
+  if (!rl.success) {
+    return res.status(429).json({ error: 'Too many password reset requests. Try again in an hour.' });
+  }
   try {
     const { email } = req.body;
     if (!email) throw new Error('Email required');
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
     const { data: user } = await supabase.from('users').select().eq('email', email).single();
-    if (!user) { console.log('RESET DEBUG: no user found for email:', email); res.json({ ok: true }); return; }
-    console.log('RESET DEBUG: user found, sending email to:', email);
+    if (!user) { res.json({ ok: true }); return; }
     const crypto = await import('crypto');
     const token = crypto.default.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 3600000).toISOString();
@@ -414,6 +428,12 @@ app.post('/api/daily-brief', async (req, res) => {
 app.post('/api/analyze-food', upload.single('photo'), async (req, res) => {
   const user = getUser(req);
   if (!user) return res.status(401).json({ error: 'Not logged in' });
+
+  const rlId = getClientId(req, user.userId);
+  const rl = await checkRateLimit(foodAnalysisLimiter, rlId);
+  if (!rl.success) {
+    return res.status(429).json({ error: "You've logged a lot of meals recently! Please wait a bit before logging more." });
+  }
 
   try {
     const { getProfile: gp } = await import('./auth.js');
