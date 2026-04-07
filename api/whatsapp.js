@@ -150,6 +150,7 @@ async function processNewMeal(user, body, numMedia, req, profile, conditionsText
 }
 
 export async function handleIncoming(req, res) {
+  console.log('WHATSAPP_VERSION_V7_SYMPTOM_INPUTTYPE');
   console.log('WA HIT:', req.body.From, '|body:', req.body.Body, '|media:', req.body.NumMedia);
   const body = req.body.Body || '';
   const from = req.body.From || '';
