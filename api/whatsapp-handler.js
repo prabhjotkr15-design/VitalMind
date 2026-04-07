@@ -7,6 +7,18 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 const FROM = process.env.TWILIO_WHATSAPP_NUMBER;
 
+function validateTwilioRequest(req) {
+  const twilioSignature = req.headers['x-twilio-signature'];
+  if (!twilioSignature) return false;
+  const url = 'https://vitalmindai.community' + req.originalUrl;
+  return twilio.validateRequest(
+    process.env.TWILIO_AUTH_TOKEN,
+    twilioSignature,
+    url,
+    req.body
+  );
+}
+
 export async function sendWhatsApp(to, message) {
   return client.messages.create({
     body: message,
@@ -149,6 +161,10 @@ async function processNewMeal(user, body, numMedia, req, profile, conditionsText
 }
 
 export async function handleIncoming(req, res) {
+  if (!validateTwilioRequest(req)) {
+    console.error('Twilio signature validation failed');
+    return res.status(403).send('Forbidden');
+  }
   const body = req.body.Body || '';
   const from = req.body.From || '';
   const numMedia = parseInt(req.body.NumMedia || '0');
