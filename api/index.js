@@ -558,6 +558,35 @@ app.post('/api/pattern-detective', async (req, res) => {
   return handler(req, res);
 });
 
+
+app.get('/api/symptom-prefs', async (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not logged in' });
+  try {
+    const { createClient: cc } = await import('@supabase/supabase-js');
+    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const { data } = await sb.from('user_profiles').select('symptom_method, symptom_time').eq('user_id', user.userId).single();
+    res.json({ method: data?.symptom_method || 'off', time: data?.symptom_time || 21 });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/symptom-prefs', async (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not logged in' });
+  const method = req.body.method;
+  if (!['whatsapp', 'dashboard', 'off'].includes(method)) return res.status(400).json({ error: 'Invalid method' });
+  try {
+    const { createClient: cc } = await import('@supabase/supabase-js');
+    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    await sb.from('user_profiles').update({ symptom_method: method }).eq('user_id', user.userId);
+    res.json({ ok: true, method });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/logout', (req, res) => {
   res.clearCookie('vm_token');
   res.redirect('/');

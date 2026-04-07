@@ -166,6 +166,21 @@
     .cl-item.done .cl-check{color:#4ade80}
     .cl-check{font-size:16px;min-width:20px}
 
+  
+    .symptom-prefs-section{background:#141112;border:1px solid rgba(255,235,225,0.06);border-radius:20px;padding:28px 32px;margin-bottom:28px}
+    .sp-head{margin-bottom:20px}
+    .sp-title{font-family:'Instrument Serif',serif;font-size:22px;color:#f0ece8;margin-bottom:6px}
+    .sp-sub{font-size:13px;color:rgba(240,236,232,0.4);line-height:1.5}
+    .sp-options{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .sp-opt{background:#0c0a0b;border:1px solid rgba(255,235,225,0.06);border-radius:14px;padding:18px 12px;cursor:pointer;text-align:center;transition:all .2s;font-family:'Outfit',sans-serif}
+    .sp-opt:hover{border-color:rgba(224,144,112,0.3)}
+    .sp-opt.active{border-color:#e09070;background:rgba(224,144,112,0.06)}
+    .sp-opt-icon{font-size:22px;margin-bottom:8px}
+    .sp-opt-label{font-size:14px;font-weight:500;color:#f0ece8;margin-bottom:2px}
+    .sp-opt-desc{font-size:11px;color:rgba(240,236,232,0.35)}
+    .sp-saved{font-size:12px;color:#4ade80;margin-top:12px;text-align:center;opacity:0;transition:opacity .3s}
+    .sp-saved.show{opacity:1}
+
   </style>
 </head>
 <body>
@@ -223,6 +238,34 @@
         <option value="10">10:00 AM</option>
       </select>
       <span class="bt-saved" id="btSaved"></span>
+    </div>
+
+    
+    <div class="symptom-prefs-section" id="symptomPrefsSection">
+      <div class="sp-head">
+        <div>
+          <div class="sp-title">Daily symptom check-in</div>
+          <div class="sp-sub">Track pain, bloating, energy & mood — VitalMind connects them with your food and recovery</div>
+        </div>
+      </div>
+      <div class="sp-options">
+        <button class="sp-opt" data-method="whatsapp" onclick="setSymptomMethod('whatsapp')">
+          <div class="sp-opt-icon">💬</div>
+          <div class="sp-opt-label">WhatsApp</div>
+          <div class="sp-opt-desc">Daily message at 9pm</div>
+        </button>
+        <button class="sp-opt" data-method="dashboard" onclick="setSymptomMethod('dashboard')">
+          <div class="sp-opt-icon">📊</div>
+          <div class="sp-opt-label">Dashboard</div>
+          <div class="sp-opt-desc">Log here when you visit</div>
+        </button>
+        <button class="sp-opt" data-method="off" onclick="setSymptomMethod('off')">
+          <div class="sp-opt-icon">✕</div>
+          <div class="sp-opt-label">Off</div>
+          <div class="sp-opt-desc">No tracking</div>
+        </button>
+      </div>
+      <div class="sp-saved" id="spSaved"></div>
     </div>
 
     <div class="meals-section" id="mealsSection">
@@ -563,6 +606,36 @@
       } catch(e) {}
     }
     checkOnboardingState();
+
+  
+    async function loadSymptomMethod() {
+      try {
+        var res = await fetch('/api/symptom-prefs');
+        var data = await res.json();
+        if (data.method) {
+          document.querySelectorAll('.sp-opt').forEach(function(btn) {
+            btn.classList.toggle('active', btn.dataset.method === data.method);
+          });
+        }
+      } catch(e) {}
+    }
+    async function setSymptomMethod(method) {
+      try {
+        await fetch('/api/symptom-prefs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ method: method })
+        });
+        document.querySelectorAll('.sp-opt').forEach(function(btn) {
+          btn.classList.toggle('active', btn.dataset.method === method);
+        });
+        var saved = document.getElementById('spSaved');
+        saved.textContent = 'Saved!';
+        saved.classList.add('show');
+        setTimeout(function() { saved.classList.remove('show'); }, 2000);
+      } catch(e) {}
+    }
+    loadSymptomMethod();
 
   </script>
 
