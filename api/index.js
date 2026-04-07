@@ -474,7 +474,7 @@ app.post('/api/meal-reminder', async (req, res) => {
 
 
 app.post('/api/whatsapp/incoming', async (req, res) => {
-  const { handleIncoming } = await import('./whatsapp.js');
+  const { handleIncoming } = await import('./whatsapp-handler.js');
   return handleIncoming(req, res);
 });
 
