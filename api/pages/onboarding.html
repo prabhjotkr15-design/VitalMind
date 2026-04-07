@@ -58,6 +58,7 @@
       <div class="progress-dot" id="dot1"></div>
       <div class="progress-dot" id="dot2"></div>
       <div class="progress-dot" id="dot3"></div>
+      <div class="progress-dot" id="dot4"></div>
     </div>
 
     <div class="step active" id="step0">
@@ -131,6 +132,29 @@
       </div>
     </div>
 
+    <div class="step" id="step4">
+      <div class="step-title">Daily symptom check-in</div>
+      <div class="step-sub">Tracking pain, bloating, energy & mood is what makes VitalMind powerful — we connect them with your food and recovery to find what triggers your worst days. How would you like to log them?</div>
+      <div class="wearable-grid">
+        <div class="wearable-card" onclick="selectSymptomMethod(this, 'whatsapp')">
+          <div class="wearable-icon" style="background:rgba(224,144,112,0.1);color:#e09070">💬</div>
+          <div><div class="wearable-name">Via WhatsApp</div><div class="wearable-tag">Quick daily message at 9pm — easiest</div></div>
+        </div>
+        <div class="wearable-card" onclick="selectSymptomMethod(this, 'dashboard')">
+          <div class="wearable-icon" style="background:rgba(224,144,112,0.1);color:#e09070">📊</div>
+          <div><div class="wearable-name">On the dashboard</div><div class="wearable-tag">Log when you visit VitalMind</div></div>
+        </div>
+        <div class="wearable-card" onclick="selectSymptomMethod(this, 'off')">
+          <div class="wearable-icon" style="background:rgba(240,236,232,0.05);color:rgba(240,236,232,0.4)">✕</div>
+          <div><div class="wearable-name">Not now</div><div class="wearable-tag">You can turn this on later in settings</div></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-skip" onclick="finishOnboarding('off')">Skip</button>
+        <button class="btn-next" id="symptomBtn" onclick="finishOnboardingWithSymptom()" style="display:none">Continue</button>
+      </div>
+    </div>
+
     <div class="step" id="step3">
       <div class="step-title">Connect your wearable</div>
       <div class="step-sub">VitalMind works best with your biometric data</div>
@@ -149,8 +173,8 @@
         </div>
       </div>
       <div class="btn-row">
-        <button class="btn-skip" onclick="finishOnboarding('none')">Skip for now</button>
-        <button class="btn-next" id="connectBtn" onclick="finishOnboarding('whoop')" style="display:none">Connect WHOOP</button>
+        <button class="btn-skip" onclick="goStep(4)">Skip for now</button>
+        <button class="btn-next" id="connectBtn" onclick="goStep(4)" style="display:none">Continue</button>
       </div>
     </div>
   </div>
@@ -206,6 +230,16 @@
       selectedGoal = card.dataset.val;
     }
 
+    var selectedSymptomMethod = 'off';
+    function selectSymptomMethod(card, method) {
+      document.querySelectorAll('#step4 .wearable-card').forEach(function(c) { c.classList.remove('selected'); });
+      card.classList.add('selected');
+      selectedSymptomMethod = method;
+      document.getElementById('symptomBtn').style.display = 'block';
+    }
+    async function finishOnboardingWithSymptom() {
+      await finishOnboarding(selectedWearable);
+    }
     function selectWearable(card, type) {
       document.querySelectorAll('.wearable-card').forEach(function(c) { c.classList.remove('selected'); });
       card.classList.add('selected');
@@ -216,7 +250,7 @@
     function goStep(n) {
       document.getElementById('step' + currentStep).classList.remove('active');
       document.getElementById('step' + n).classList.add('active');
-      for (var i = 0; i < 4; i++) {
+      for (var i = 0; i < 5; i++) {
         var dot = document.getElementById('dot' + i);
         dot.classList.remove('active', 'done');
         if (i < n) dot.classList.add('done');
@@ -247,7 +281,8 @@
             weight_kg: weight ? (parseFloat(weight) * 0.453592) : null,
             height_cm: height ? (parseFloat(height) * 2.54) : null,
             wearable: wearable,
-            brief_hour: 7
+            brief_hour: 7,
+            symptom_method: selectedSymptomMethod
           })
         });
       } catch(e) {}

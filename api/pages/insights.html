@@ -181,6 +181,22 @@
     .sp-saved{font-size:12px;color:#4ade80;margin-top:12px;text-align:center;opacity:0;transition:opacity .3s}
     .sp-saved.show{opacity:1}
 
+  
+    .symptom-modal-overlay{position:fixed;inset:0;background:rgba(12,10,11,0.85);backdrop-filter:blur(8px);z-index:300;display:flex;align-items:center;justify-content:center;padding:24px}
+    .symptom-modal{max-width:480px;width:100%;background:#141112;border:1px solid rgba(255,235,225,0.08);border-radius:24px;padding:40px 36px}
+    .sm-icon{font-size:40px;margin-bottom:16px;text-align:center}
+    .sm-title{font-family:'Instrument Serif',serif;font-size:28px;color:#f0ece8;margin-bottom:16px;text-align:center}
+    .sm-body{font-size:14px;line-height:1.7;color:rgba(240,236,232,0.55);margin-bottom:24px}
+    .sm-body p{margin-bottom:12px}
+    .sm-options{display:flex;flex-direction:column;gap:10px}
+    .sm-opt{display:flex;align-items:center;gap:14px;padding:16px 18px;background:#0c0a0b;border:1px solid rgba(255,235,225,0.06);border-radius:14px;cursor:pointer;transition:all .2s;font-family:'Outfit',sans-serif;text-align:left}
+    .sm-opt:hover{border-color:#e09070;background:rgba(224,144,112,0.05)}
+    .sm-opt-icon{font-size:24px}
+    .sm-opt-label{font-size:15px;font-weight:500;color:#f0ece8;margin-bottom:2px}
+    .sm-opt-desc{font-size:12px;color:rgba(240,236,232,0.4)}
+    .sm-opt-off{justify-content:center}
+    .sm-opt-off .sm-opt-text{text-align:center}
+
   </style>
 </head>
 <body>
@@ -637,6 +653,29 @@
     }
     loadSymptomMethod();
 
+  
+    async function checkSymptomPrompt() {
+      try {
+        var res = await fetch('/api/symptom-prefs');
+        var data = await res.json();
+        if (!data.method || data.method === null) {
+          document.getElementById('symptomModalOverlay').style.display = 'flex';
+        }
+      } catch(e) {}
+    }
+    async function chooseSymptomMethod(method) {
+      try {
+        await fetch('/api/symptom-prefs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ method: method })
+        });
+        document.getElementById('symptomModalOverlay').style.display = 'none';
+        loadSymptomMethod();
+      } catch(e) {}
+    }
+    setTimeout(checkSymptomPrompt, 1000);
+
   </script>
 
   <button class="food-fab" id="foodFab" onclick="openFoodPanel()">
@@ -687,6 +726,41 @@
 
     <div class="fp-result" id="foodResult"></div>
   </div>
+
+
+    <div class="symptom-modal-overlay" id="symptomModalOverlay" style="display:none">
+      <div class="symptom-modal">
+        <div class="sm-icon">💜</div>
+        <div class="sm-title">Something new for you</div>
+        <div class="sm-body">
+          <p>VitalMind now tracks your daily symptoms — pain, bloating, energy, mood. We connect them with your food and recovery to find exactly what triggers your worst days.</p>
+          <p>This is the data WHOOP can't capture. And it's what makes the difference between guessing and knowing.</p>
+          <p style="margin-top:16px;font-weight:500;color:#f0ece8">How would you like to log them?</p>
+        </div>
+        <div class="sm-options">
+          <button class="sm-opt" onclick="chooseSymptomMethod('whatsapp')">
+            <div class="sm-opt-icon">💬</div>
+            <div class="sm-opt-text">
+              <div class="sm-opt-label">WhatsApp</div>
+              <div class="sm-opt-desc">Quick message at 9pm</div>
+            </div>
+          </button>
+          <button class="sm-opt" onclick="chooseSymptomMethod('dashboard')">
+            <div class="sm-opt-icon">📊</div>
+            <div class="sm-opt-text">
+              <div class="sm-opt-label">Dashboard</div>
+              <div class="sm-opt-desc">Log when you visit</div>
+            </div>
+          </button>
+          <button class="sm-opt sm-opt-off" onclick="chooseSymptomMethod('off')">
+            <div class="sm-opt-text">
+              <div class="sm-opt-label">Not now</div>
+              <div class="sm-opt-desc">Change anytime in settings</div>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
 
 </body>
 </html>

@@ -523,6 +523,7 @@ app.post('/api/onboarding', async (req, res) => {
       height_cm: req.body.height_cm,
       wearable: req.body.wearable || 'none',
       brief_hour: req.body.brief_hour || 7,
+      symptom_method: req.body.symptom_method || 'off',
       onboarding_complete: true
     };
     await sb.from('user_profiles').upsert(data, { onConflict: 'user_id' });
@@ -566,7 +567,7 @@ app.get('/api/symptom-prefs', async (req, res) => {
     const { createClient: cc } = await import('@supabase/supabase-js');
     const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
     const { data } = await sb.from('user_profiles').select('symptom_method, symptom_time').eq('user_id', user.userId).single();
-    res.json({ method: data?.symptom_method || 'off', time: data?.symptom_time || 21 });
+    res.json({ method: data?.symptom_method, time: data?.symptom_time || 21 });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
