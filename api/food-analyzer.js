@@ -93,6 +93,15 @@ For flags: if FODMAP diet, flag garlic, onion, wheat, lactose, legumes. If endom
 
   parsed.total = calculatedTotal;
 
+  // Guardrail: reject inputs that Claude couldn't recognize as food
+  const noItems = !parsed.items || parsed.items.length === 0;
+  const noCalories = calculatedTotal.calories === 0;
+  if (noItems && noCalories) {
+    const err = new Error('NOT_FOOD');
+    err.code = 'NOT_FOOD';
+    throw err;
+  }
+
   await supabase.from('food_logs').insert({
     user_id: userId,
     meal_type: autoMealType,

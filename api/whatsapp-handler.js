@@ -95,10 +95,17 @@ async function processFoodClarificationReply(user, pending, body, profile, res) 
   await supabase.from('pending_meals').delete().eq('user_id', user.id);
 
   let result;
-  if (pending.input_type === 'photo' && pending.image_base64) {
-    result = await analyzeFood(user.id, 'photo', combined, pending.image_base64, pending.image_mime, profile);
-  } else {
-    result = await analyzeFood(user.id, 'text', combined, null, null, profile);
+  try {
+    if (pending.input_type === 'photo' && pending.image_base64) {
+      result = await analyzeFood(user.id, 'photo', combined, pending.image_base64, pending.image_mime, profile);
+    } else {
+      result = await analyzeFood(user.id, 'text', combined, null, null, profile);
+    }
+  } catch(err) {
+    if (err.code === 'NOT_FOOD') {
+      return reply(res, "I couldn't recognize any food in your message. Try describing what you ate (like 'grilled chicken with rice') or send a photo!");
+    }
+    throw err;
   }
 
   const flags = result.flags && result.flags.length > 0 ? '\n\n⚠️ ' + result.flags.join('\n⚠️ ') : '';

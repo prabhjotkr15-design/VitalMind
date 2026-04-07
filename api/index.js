@@ -452,6 +452,9 @@ app.post('/api/analyze-food', upload.single('photo'), async (req, res) => {
 
     res.json(result);
   } catch(err) {
+    if (err.code === 'NOT_FOOD') {
+      return res.status(400).json({ error: "I couldn't recognize any food in that. Try describing it differently or send a photo." });
+    }
     console.error('Food analysis error:', err.message);
     res.status(500).json({ error: 'Failed to analyze food' });
   }

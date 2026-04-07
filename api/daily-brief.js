@@ -84,7 +84,7 @@ Examples:
 Format: clean HTML using p, strong, ul, li only. No headings. Keep under 250 words. Be warm, be specific, be the specialist who finally connects the dots for them.
 
 YESTERDAY'S FOOD LOG:
-${foodLogs && foodLogs.length > 0 ? JSON.stringify(foodLogs.map(f => ({ meal: f.meal_type, food: f.description, calories: f.calories, protein: f.protein, carbs: f.carbs, fat: f.fat, flags: f.flags, time: f.logged_at })), null, 2) : 'No meals logged yesterday. Note this gap — encourage them to log today so you can provide better analysis tomorrow.'}
+${foodLogs && foodLogs.length > 0 ? JSON.stringify(foodLogs.map(f => { const utc = new Date(f.logged_at); const pst = new Date(utc.getTime() - 7 * 60 * 60 * 1000); const timeStr = pst.toISOString().replace('T', ' ').substring(0, 16) + ' PST'; return { meal: f.meal_type, food: f.description, calories: f.calories, protein: f.protein, carbs: f.carbs, fat: f.fat, flags: f.flags, time_pst: timeStr }; }), null, 2) : 'No meals logged yesterday. Note this gap — encourage them to log today so you can provide better analysis tomorrow.'}
 
 WHOOP BIOMETRIC DATA (past 7 days):
 ${JSON.stringify(whoopData, null, 2)}`
