@@ -588,6 +588,48 @@ app.post('/api/symptom-prefs', async (req, res) => {
   }
 });
 
+
+app.post('/api/symptom-checkin', async (req, res) => {
+  const handler = (await import('./symptom-checkin.js')).default;
+  return handler(req, res);
+});
+
+
+app.post('/api/symptoms', async (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not logged in' });
+  try {
+    const { createClient: cc } = await import('@supabase/supabase-js');
+    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    await sb.from('symptom_logs').insert({
+      user_id: user.userId,
+      pain: req.body.pain,
+      bloating: req.body.bloating,
+      energy: req.body.energy,
+      mood: req.body.mood
+    });
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/symptoms/today', async (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not logged in' });
+  try {
+    const { createClient: cc } = await import('@supabase/supabase-js');
+    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const now = new Date();
+    const pst = new Date(now.getTime() - 7 * 60 * 60 * 1000);
+    const today = pst.toISOString().split('T')[0];
+    const { data } = await sb.from('symptom_logs').select('id').eq('user_id', user.userId).gte('logged_at', today + 'T00:00:00').limit(1);
+    res.json({ logged: data && data.length > 0 });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/logout', (req, res) => {
   res.clearCookie('vm_token');
   res.redirect('/');

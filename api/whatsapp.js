@@ -92,8 +92,50 @@ export async function handleIncoming(req, res) {
     const pending = pendingRows && pendingRows.length > 0 ? pendingRows[0] : null;
     const pendingAge = pending ? (Date.now() - new Date(pending.created_at).getTime()) / 60000 : 999;
 
+    // STEP 1.5: Handle symptom check-in reply
+    if (pending && pending.original_input === 'SYMPTOM_CHECKIN' && pendingAge < 720 && numMedia === 0 && body.trim()) {
+      const text = body.trim().toLowerCase();
+
+      if (text === 'skip') {
+        await supabase.from('pending_meals').delete().eq('user_id', user.id);
+        const twiml = '<Response><Message>No problem — see you tomorrow! 💜</Message></Response>';
+        res.type('text/xml').send(twiml);
+        return;
+      }
+
+      const numbers = body.trim().match(/\d+/g);
+      if (!numbers || numbers.length < 4) {
+        const twiml = '<Response><Message>I need 4 numbers separated by spaces:\n\nPain (0-10) Bloating (0-10) Energy (0-10) Mood (0-10)\n\nExample: 3 5 7 8</Message></Response>';
+        res.type('text/xml').send(twiml);
+        return;
+      }
+
+      const [pain, bloating, energy, mood] = numbers.slice(0, 4).map(Number);
+      const validRange = (n) => n >= 0 && n <= 10;
+      if (!validRange(pain) || !validRange(bloating) || !validRange(energy) || !validRange(mood)) {
+        const twiml = '<Response><Message>Each number should be between 0 and 10. Try again like this: 3 5 7 8</Message></Response>';
+        res.type('text/xml').send(twiml);
+        return;
+      }
+
+      await supabase.from('symptom_logs').insert({
+        user_id: user.id,
+        pain: pain,
+        bloating: bloating,
+        energy: energy,
+        mood: mood
+      });
+
+      await supabase.from('pending_meals').delete().eq('user_id', user.id);
+
+      const summary = pain >= 7 ? 'Tough day. I am sorry. ' : pain >= 4 ? 'Got it. ' : 'Glad you are feeling decent today. ';
+      const twiml = '<Response><Message>✅ Logged: pain ' + pain + ', bloating ' + bloating + ', energy ' + energy + ', mood ' + mood + '\n\n' + summary + 'I will use this to find your patterns. See you tomorrow 💜</Message></Response>';
+      res.type('text/xml').send(twiml);
+      return;
+    }
+
     // STEP 2: User is answering clarification questions
-    if (pending && pendingAge < 30 && numMedia === 0 && body.trim()) {
+    if (pending && pending.original_input !== 'SYMPTOM_CHECKIN' && pendingAge < 30 && numMedia === 0 && body.trim()) {
       const combined = pending.original_input + '. Additional details from user: ' + body.trim();
 
       // Delete pending FIRST to prevent loops

@@ -197,6 +197,23 @@
     .sm-opt-off{justify-content:center}
     .sm-opt-off .sm-opt-text{text-align:center}
 
+  
+    .dash-symptom{background:#141112;border:1px solid rgba(255,235,225,0.06);border-radius:20px;padding:28px 32px;margin-bottom:28px}
+    .ds-head{margin-bottom:20px}
+    .ds-title{font-family:'Instrument Serif',serif;font-size:22px;color:#f0ece8;margin-bottom:4px}
+    .ds-sub{font-size:13px;color:rgba(240,236,232,0.4)}
+    .ds-sliders{display:flex;flex-direction:column;gap:16px;margin-bottom:20px}
+    .ds-slider-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .ds-label{font-size:13px;color:rgba(240,236,232,0.6)}
+    .ds-value{font-size:14px;font-weight:500;color:#e09070;font-variant-numeric:tabular-nums;min-width:24px;text-align:right}
+    .ds-slider input[type=range]{width:100%;height:4px;background:#0c0a0b;border-radius:2px;outline:none;-webkit-appearance:none;appearance:none}
+    .ds-slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;background:#e09070;border-radius:50%;cursor:pointer}
+    .ds-slider input[type=range]::-moz-range-thumb{width:18px;height:18px;background:#e09070;border-radius:50%;border:none;cursor:pointer}
+    .ds-submit{width:100%;padding:14px;background:#e09070;color:#0c0a0b;border:none;border-radius:10px;font-family:'Outfit',sans-serif;font-weight:500;font-size:14px;cursor:pointer;transition:all .2s}
+    .ds-submit:hover{background:#f0a888}
+    .ds-saved{text-align:center;font-size:13px;color:#4ade80;margin-top:12px;opacity:0;transition:opacity .3s}
+    .ds-saved.show{opacity:1}
+
   </style>
 </head>
 <body>
@@ -282,6 +299,34 @@
         </button>
       </div>
       <div class="sp-saved" id="spSaved"></div>
+    </div>
+
+    
+    <div class="dash-symptom" id="dashSymptom" style="display:none">
+      <div class="ds-head">
+        <div class="ds-title">How is your body today?</div>
+        <div class="ds-sub">Drag each slider — takes 10 seconds</div>
+      </div>
+      <div class="ds-sliders">
+        <div class="ds-slider">
+          <div class="ds-slider-row"><span class="ds-label">Pain</span><span class="ds-value" id="painVal">5</span></div>
+          <input type="range" min="0" max="10" value="5" id="painSlider" oninput="document.getElementById('painVal').textContent=this.value"/>
+        </div>
+        <div class="ds-slider">
+          <div class="ds-slider-row"><span class="ds-label">Bloating</span><span class="ds-value" id="bloatVal">5</span></div>
+          <input type="range" min="0" max="10" value="5" id="bloatSlider" oninput="document.getElementById('bloatVal').textContent=this.value"/>
+        </div>
+        <div class="ds-slider">
+          <div class="ds-slider-row"><span class="ds-label">Energy</span><span class="ds-value" id="energyVal">5</span></div>
+          <input type="range" min="0" max="10" value="5" id="energySlider" oninput="document.getElementById('energyVal').textContent=this.value"/>
+        </div>
+        <div class="ds-slider">
+          <div class="ds-slider-row"><span class="ds-label">Mood</span><span class="ds-value" id="moodVal">5</span></div>
+          <input type="range" min="0" max="10" value="5" id="moodSlider" oninput="document.getElementById('moodVal').textContent=this.value"/>
+        </div>
+      </div>
+      <button class="ds-submit" onclick="logSymptoms()">Log how I'm feeling</button>
+      <div class="ds-saved" id="dsSaved"></div>
     </div>
 
     <div class="meals-section" id="mealsSection">
@@ -676,6 +721,41 @@
     }
     setTimeout(checkSymptomPrompt, 1000);
 
+  
+    async function showSymptomWidget() {
+      try {
+        var res = await fetch('/api/symptom-prefs');
+        var data = await res.json();
+        if (data.method === 'dashboard') {
+          var todayRes = await fetch('/api/symptoms/today');
+          var todayData = await todayRes.json();
+          if (!todayData.logged) {
+            document.getElementById('dashSymptom').style.display = 'block';
+          }
+        }
+      } catch(e) {}
+    }
+    async function logSymptoms() {
+      var pain = parseInt(document.getElementById('painSlider').value);
+      var bloating = parseInt(document.getElementById('bloatSlider').value);
+      var energy = parseInt(document.getElementById('energySlider').value);
+      var mood = parseInt(document.getElementById('moodSlider').value);
+      try {
+        await fetch('/api/symptoms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pain: pain, bloating: bloating, energy: energy, mood: mood })
+        });
+        var saved = document.getElementById('dsSaved');
+        saved.textContent = '✅ Logged for today';
+        saved.classList.add('show');
+        setTimeout(function() {
+          document.getElementById('dashSymptom').style.display = 'none';
+        }, 1500);
+      } catch(e) {}
+    }
+    showSymptomWidget();
+
   </script>
 
   <button class="food-fab" id="foodFab" onclick="openFoodPanel()">
@@ -733,8 +813,7 @@
         <div class="sm-icon">💜</div>
         <div class="sm-title">Something new for you</div>
         <div class="sm-body">
-          <p>VitalMind now tracks your daily symptoms — pain, bloating, energy, mood. We connect them with your food and recovery to find exactly what triggers your worst days.</p>
-          <p>This is the data WHOOP can't capture. And it's what makes the difference between guessing and knowing.</p>
+          <p>VitalMind now tracks your daily symptoms — pain, bloating, energy, mood. We connect them with your food and recovery to find what's actually affecting how you feel.</p>
           <p style="margin-top:16px;font-weight:500;color:#f0ece8">How would you like to log them?</p>
         </div>
         <div class="sm-options">
