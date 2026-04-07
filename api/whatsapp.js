@@ -176,6 +176,8 @@ export async function handleIncoming(req, res) {
       .limit(1);
 
     const pending = pendingRows && pendingRows.length > 0 ? pendingRows[0] : null;
+    console.log('V8_PENDING_RAW:', JSON.stringify(pending));
+    console.log('V8_INPUT_TYPE:', pending?.input_type, 'EQ_SYMPTOM:', pending?.input_type === 'symptom');
     const pendingAge = pending ? (Date.now() - new Date(pending.created_at).getTime()) / 60000 : 999;
 
     // ROUTE 1: Symptom check-in reply (text only, within 12 hours)
