@@ -17,7 +17,7 @@ async function fetchWeekData(accessToken) {
   return {
     recovery: recoveryRes.status === 'fulfilled' ? recoveryRes.value.data.records : [],
     sleep: sleepRes.status === 'fulfilled' ? sleepRes.value.data.records : [],
-    workout: workoutRes.status === 'fulfilled' ? workoutRes.value.data.records : [],
+    workout: workoutRes.status === "fulfilled" ? (console.log("WORKOUT RES:", JSON.stringify(workoutRes.value.data).substring(0, 800)), workoutRes.value.data.records || []) : (console.log("WORKOUT FETCH ERROR:", workoutRes.reason?.response?.status, workoutRes.reason?.response?.data, workoutRes.reason?.message), []),
   };
 }
 
