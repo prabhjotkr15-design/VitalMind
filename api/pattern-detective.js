@@ -12,12 +12,12 @@ async function fetchWeekData(accessToken) {
   const [recoveryRes, sleepRes, workoutRes] = await Promise.allSettled([
     axios.get('https://api.prod.whoop.com/developer/v2/recovery?limit=7', { headers }),
     axios.get('https://api.prod.whoop.com/developer/v2/activity/sleep?limit=7', { headers }),
-    axios.get('https://api.prod.whoop.com/developer/v2/workout?limit=7', { headers }),
+    axios.get('https://api.prod.whoop.com/developer/v2/activity/workout?limit=7', { headers }),
   ]);
   return {
     recovery: recoveryRes.status === 'fulfilled' ? recoveryRes.value.data.records : [],
     sleep: sleepRes.status === 'fulfilled' ? sleepRes.value.data.records : [],
-    workout: workoutRes.status === "fulfilled" ? (console.log("WORKOUT RES:", JSON.stringify(workoutRes.value.data).substring(0, 800)), workoutRes.value.data.records || []) : (console.log("WORKOUT FETCH ERROR:", workoutRes.reason?.response?.status, workoutRes.reason?.response?.data, workoutRes.reason?.message), []),
+    workout: workoutRes.status === "fulfilled" ? (workoutRes.value.data.records || []) : [],
   };
 }
 
@@ -55,7 +55,6 @@ export default async function handler(req, res) {
             if (newToken) whoopData = await fetchWeekData(newToken);
           } catch(e) {}
         }
-        console.log("WORKOUT DEBUG user:", tokenRow.user_id, "workout count:", whoopData.workout?.length || 0, "sample:", JSON.stringify(whoopData.workout?.[0] || null).substring(0, 500));
         if (!whoopData.recovery?.length) continue;
 
         const { data: foodLogs } = await supabase

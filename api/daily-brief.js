@@ -13,7 +13,7 @@ async function fetchWhoopData(accessToken) {
     axios.get('https://api.prod.whoop.com/developer/v1/user/profile/basic', { headers }),
     axios.get('https://api.prod.whoop.com/developer/v2/recovery?limit=7', { headers }),
     axios.get('https://api.prod.whoop.com/developer/v2/activity/sleep?limit=7', { headers }),
-    axios.get('https://api.prod.whoop.com/developer/v2/workout?limit=7', { headers }),
+    axios.get('https://api.prod.whoop.com/developer/v2/activity/workout?limit=7', { headers }),
   ]);
   return {
     profile: profileRes.status === 'fulfilled' ? profileRes.value.data : null,
