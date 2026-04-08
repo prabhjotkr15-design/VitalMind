@@ -55,6 +55,7 @@ export default async function handler(req, res) {
             if (newToken) whoopData = await fetchWeekData(newToken);
           } catch(e) {}
         }
+        console.log("WORKOUT DEBUG user:", tokenRow.user_id, "workout count:", whoopData.workout?.length || 0, "sample:", JSON.stringify(whoopData.workout?.[0] || null).substring(0, 500));
         if (!whoopData.recovery?.length) continue;
 
         const { data: foodLogs } = await supabase
