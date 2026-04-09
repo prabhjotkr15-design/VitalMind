@@ -93,7 +93,7 @@ ${JSON.stringify(whoopData, null, 2)}`
     { headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' } }
   );
 
-  return { insight: claudeRes.data.content[0].text, firstName, latestRecovery, latestHRV, latestRHR };
+  const inputPayload = { userProfile: { conditions: userProfile?.conditions, diet: userProfile?.diet, goal: userProfile?.goal }, whoopData, foodLogs }; return { insight: claudeRes.data.content[0].text, firstName, latestRecovery, latestHRV, latestRHR, inputPayload };
 }
 
 export default async function handler(req, res) {
@@ -151,7 +151,22 @@ export default async function handler(req, res) {
           const { data: fl } = await supabase.from('food_logs').select().eq('user_id', tokenRow.user_id).gte('logged_at', yday + 'T00:00:00').order('logged_at', { ascending: true });
           userFoodLogs = fl || [];
         } catch(e) {}
-        const { insight, firstName, latestRecovery, latestHRV, latestRHR } = await generateInsight(whoopData, profile, userFoodLogs);
+        const { insight, firstName, latestRecovery, latestHRV, latestRHR, inputPayload } = await generateInsight(whoopData, profile, userFoodLogs);
+
+        // Log to ai_outputs for quality evaluation
+        let aiOutputId = null;
+        try {
+          const { data: logged } = await supabase.from("ai_outputs").insert({
+            agent_name: "morning_brief",
+            user_id: tokenRow.user_id,
+            model: "claude-opus-4-6",
+            input_data: inputPayload,
+            output_text: insight
+          }).select("id").single();
+          aiOutputId = logged?.id;
+        } catch(logErr) {
+          console.error("Failed to log to ai_outputs:", logErr.message);
+        }
 
         const recoveryColor = latestRecovery >= 67 ? '#4ade80' : latestRecovery >= 34 ? '#f59e0b' : '#ef4444';
         const recoveryLabel = latestRecovery >= 67 ? 'Ready to perform' : latestRecovery >= 34 ? 'Moderate recovery' : 'Rest recommended';
