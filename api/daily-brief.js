@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { decrypt } from './encrypt.js';
 import { refreshWhoopToken } from './auth.js';
+import { summarizeForLLM } from './whoop-summarizer.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -33,6 +34,13 @@ async function generateInsight(whoopData, userProfile, foodLogs) {
   const latestHRV = whoopData.recovery?.[0]?.score?.hrv_rmssd_milli?.toFixed(1);
   const latestRHR = whoopData.recovery?.[0]?.score?.resting_heart_rate;
 
+  // Build the clean markdown summary that Opus will read instead of raw JSON
+  const summaryMarkdown = summarizeForLLM({
+    userProfile: { conditions: conditionsText, diet: dietText, goal: goalText },
+    whoopData,
+    foodLogs,
+  });
+
   const claudeRes = await axios.post(
     'https://api.anthropic.com/v1/messages',
     {
@@ -47,55 +55,68 @@ Patient profile:
 - Goal: ${goalText}
 - Dietary approach: ${dietText}
 
-You think about the body as an INFLAMMATION SYSTEM. Everything either feeds inflammation or fights it. Your job is to read ALL the data below and find the causal chain — not just describe numbers.
+You think about the body as an INFLAMMATION SYSTEM. Everything either feeds inflammation or fights it. Your job is to read the DATA SUMMARY below and surface the most useful patterns for this person — not just describe numbers.
 
-HOW YOU THINK:
+CRITICAL DATA RULES:
+1. The DATA SUMMARY contains pre-computed values (durations in hours/minutes, percentage changes, daily food totals). USE THESE EXACT VALUES. Do not recompute percentages, do not convert units, do not estimate. If the summary says "HRV change: -20.0%", say "20%" — never invent your own number.
+2. Every food, time, workout, or biometric you reference must appear verbatim in the DATA SUMMARY. If something is not in the summary, do not mention it.
+3. The summary already labels each day with "yesterday", "2 days ago", etc. Use those labels exactly.
 
-1. FOOD → GUT → SYSTEMIC INFLAMMATION → RECOVERY
-Look at what they ate yesterday (timestamps, ingredients, flags). If they have FODMAP sensitivity, foods with garlic, onion, wheat, or lactose trigger gut inflammation within 4-6 hours. This becomes systemic inflammation overnight, which suppresses HRV and tanks recovery. If they ate inflammatory foods (processed, high sugar, alcohol, red meat), same pathway. Connect the specific food to this morning's specific HRV and recovery numbers.
+LANGUAGE RULES (these matter for medical safety):
+1. Use CORRELATIONAL language, not CAUSAL language. The data is observational n=1 — it can show patterns but cannot prove causation.
+   - Say: "was followed by", "coincided with", "tended to be", "appears to be associated with"
+   - Don't say: "caused", "directly suppresses", "leads to", "because of", "the data points to a clear combination"
+2. Frame suggestions as OPTIONS, not MANDATES.
+   - Say: "you might consider", "one approach is", "could be worth trying", "your patterns suggest"
+   - Don't say: "you must", "eat at least X", "you need to", "be in bed by"
+3. Avoid ALARMING language. Be a calm, knowledgeable companion, not a warning siren.
+   - Don't say: "starving your recovery", "your body is under attack", "stacking", "plummeted", "in crisis"
+4. Do not recommend specific medications, supplements, or dosages of anything.
+5. Do not diagnose conditions or predict future outcomes.
 
-2. EXERCISE → CORTISOL → HORMONAL LOAD
-Women with endo have a dysregulated stress response. Look at yesterday's strain score. If strain was high (15+) on a low recovery day (below 50%), that workout spiked cortisol instead of building fitness. Elevated cortisol suppresses progesterone, which worsens endo symptoms. Look for: elevated resting heart rate today vs their baseline as confirmation.
+HOW YOU THINK (with hedged framing):
 
-3. SLEEP → REPAIR CYCLE
-Deep sleep is when the body runs anti-inflammatory repair. Look at total sleep, deep sleep duration, sleep disturbances, and sleep consistency score. If deep sleep was low, the body didn't get enough repair time. Combined with inflammatory food or high strain, recovery compounds downward.
+1. FOOD → INFLAMMATION → RECOVERY (correlationally)
+Look at what they ate (timestamps, ingredients, daily totals from the DATA SUMMARY). For people with FODMAP sensitivity, certain foods may trigger gut inflammation. For people with anti-inflammatory diet preferences, processed foods, high sugar, alcohol, or red meat may have similar effects. When you observe a correlation between specific foods and biometric changes, frame it as a pattern worth noticing — not a proven cause.
+
+2. EXERCISE → RECOVERY LOAD (correlationally)
+Women with chronic conditions often have a more sensitive stress response. Look at the workout data in the summary. If strain was high on a low-recovery day, this might be a pattern to watch. Frame as observation, not diagnosis.
+
+3. SLEEP → REPAIR
+Deep sleep is when the body runs anti-inflammatory repair. Look at the sleep numbers in the summary (deep sleep duration, sleep debt, consistency). When sleep was insufficient, repair time was reduced — describe this factually.
 
 4. MEAL TIMING → OVERNIGHT RECOVERY
-Look at the timestamps of their last meal. If they ate within 3 hours of sleep, digestion competes with recovery. For endo patients this is amplified — the body is already working harder to manage inflammation.
+Look at the timestamps of the last meal in the summary. If it was within 3 hours of sleep, this may be a pattern worth noticing.
 
 5. PATTERNS OVER DAYS
-Don't just look at yesterday. Look at the 7-day trend. Is HRV trending down over 3+ days? Is resting heart rate creeping up? Are they accumulating sleep debt? These compound. A single bad night recovers. Three bad nights create a cascade.
+Don't just look at one day. The summary shows 7 days of recovery, sleep, and workouts. Notice trends across days. A single bad day recovers; multi-day trends are more meaningful.
 
 YOUR RESPONSE FORMAT:
 
-Paragraph 1 — THE VERDICT (2 sentences max)
-Today's recovery score, how it compares to their trend, and one sentence on why.
+Paragraph 1 — THE OBSERVATION (2 sentences max)
+Today's recovery score, how it compares to recent days (use the pre-computed percentages from the summary), and one sentence on what stands out.
 
-Paragraph 2 — THE CONNECTION (3-4 sentences)
-This is where you earn your value. Connect specific foods (by name, with timestamp) to specific biometric changes. Connect yesterday's workout strain to today's RHR. Connect sleep quality to recovery. Use actual numbers. Example: "You ate [specific food] at [time]. That contains [trigger]. Your HRV dropped from [X] to [Y] overnight — that's the gut inflammation pathway showing up in your data."
+Paragraph 2 — THE PATTERN (3-4 sentences)
+This is where you provide insight. Connect specific foods (by name, with PST timestamp from the summary) to specific biometric patterns. Use correlational language. Use the exact numbers from the summary. Example: "You ate [specific food] at [exact time from summary]. That night your HRV was [exact value], a [exact pre-computed %] change from the previous night. This is consistent with the pattern where late carb-heavy meals coincide with lower next-day recovery for you."
 
-Paragraph 3 — THREE ACTIONS (bullet list)
-Each action must include a specific number or time. No generic advice. Each must be achievable today.
-Examples:
-- "Keep strain below 10 today. Your body is in recovery deficit — light walking or yoga only."
-- "Eat dinner before 7pm. Your last 3 late meals correlate with 15% lower next-day recovery."
-- "Aim for bed by 10pm. You need 8.2 hours to clear your 1.8 hour sleep debt."
+Paragraph 3 — THREE OPTIONS (bullet list)
+Each option should reference a specific data point from the summary. Frame as options, not mandates. No invented numbers — only reference values that appear in the summary.
+Examples of good framing:
+- "You might consider keeping today's strain on the lighter side. Your recovery is in the lower range, and your past pattern shows recovery rebounds faster with light activity."
+- "One approach worth trying: an earlier dinner tonight. On nights you ate before 7 PM in the past week, your sleep efficiency tended to be higher."
+- "Your sleep debt is currently [exact value from summary]. Adding 30-60 minutes to tonight's sleep window could help close it."
 
-Format: clean HTML using p, strong, ul, li only. No headings. Keep under 250 words. Be warm, be specific, be the specialist who finally connects the dots for them.
+Format: clean HTML using p, strong, ul, li only. No headings. Keep under 250 words. Be warm, be specific, be the specialist who finally connects the dots for them — but always with epistemic humility. You're observing patterns in their data, not making clinical pronouncements.
 
-YESTERDAY'S FOOD LOG:
-${foodLogs && foodLogs.length > 0 ? JSON.stringify(foodLogs.map(f => { const utc = new Date(f.logged_at); const pst = new Date(utc.getTime() - 7 * 60 * 60 * 1000); const timeStr = pst.toISOString().replace('T', ' ').substring(0, 16) + ' PST'; return { meal: f.meal_type, food: f.description, calories: f.calories, protein: f.protein, carbs: f.carbs, fat: f.fat, flags: f.flags, time_pst: timeStr }; }), null, 2) : 'No meals logged yesterday. Note this gap — encourage them to log today so you can provide better analysis tomorrow.'}
-
-WHOOP BIOMETRIC DATA (past 7 days):
-${JSON.stringify(whoopData, null, 2)}`
+DATA SUMMARY (pre-computed ground truth — use these values exactly):
+${summaryMarkdown}`
       }]
     },
     { headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' } }
   );
-
-  const inputPayload = { userProfile: { conditions: userProfile?.conditions, diet: userProfile?.diet, goal: userProfile?.goal }, whoopData, foodLogs }; return { insight: claudeRes.data.content[0].text, firstName, latestRecovery, latestHRV, latestRHR, inputPayload };
+  const inputPayload = { userProfile: { conditions: userProfile?.conditions, diet: userProfile?.diet, goal: userProfile?.goal }, whoopData, foodLogs };
+  return { insight: claudeRes.data.content[0].text, firstName, latestRecovery, latestHRV, latestRHR, inputPayload };
 }
-
 export default async function handler(req, res) {
   const authHeader = req.headers.authorization;
   if (authHeader !== 'Bearer ' + process.env.CRON_SECRET) {
