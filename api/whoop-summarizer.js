@@ -66,8 +66,8 @@ function relativeDateLabel(targetDateStr, todayDateStr) {
 }
 
 // Get today's date in PST as YYYY-MM-DD
-function getTodayPSTDateString() {
-  const now = new Date();
+function getTodayPSTDateString(referenceDate) {
+  const now = referenceDate ? new Date(referenceDate) : new Date();
   const pst = new Date(now.getTime() - 7 * 60 * 60 * 1000);
   return pst.getUTCFullYear() + '-' +
     String(pst.getUTCMonth() + 1).padStart(2, '0') + '-' +
@@ -93,7 +93,7 @@ function formatPct(pct) {
 // Recovery summarizer
 // =====================================================================
 
-function summarizeRecovery(recoveryArr, sleepArr) {
+function summarizeRecovery(recoveryArr, sleepArr, referenceDate) {
   if (!recoveryArr || recoveryArr.length === 0) {
     return '## Recovery\nNo recovery data available.\n';
   }
@@ -123,7 +123,7 @@ function summarizeRecovery(recoveryArr, sleepArr) {
   if (records.length === 0) return '## Recovery\nNo recovery data available.\n';
 
   records.sort((a, b) => b.date.localeCompare(a.date));
-  const todayPST = getTodayPSTDateString();
+  const todayPST = getTodayPSTDateString(referenceDate);
 
   let out = '## Recovery (most recent first)\n';
   for (const r of records) {
@@ -160,7 +160,7 @@ function summarizeRecovery(recoveryArr, sleepArr) {
 // Sleep summarizer
 // =====================================================================
 
-function summarizeSleep(sleepArr) {
+function summarizeSleep(sleepArr, referenceDate) {
   if (!sleepArr || sleepArr.length === 0) {
     return '## Sleep\nNo sleep data available.\n';
   }
@@ -170,7 +170,7 @@ function summarizeSleep(sleepArr) {
     (b.end || '').localeCompare(a.end || '')
   );
 
-  const todayPST = getTodayPSTDateString();
+  const todayPST = getTodayPSTDateString(referenceDate);
   let out = '## Sleep (most recent first)\n';
 
   for (const s of sorted) {
@@ -235,7 +235,7 @@ function summarizeSleep(sleepArr) {
 // Workout summarizer
 // =====================================================================
 
-function summarizeWorkouts(workoutArr) {
+function summarizeWorkouts(workoutArr, referenceDate) {
   if (!workoutArr || workoutArr.length === 0) {
     return '## Workouts\nNo workouts logged in the last 7 days.\n\n';
   }
@@ -244,7 +244,7 @@ function summarizeWorkouts(workoutArr) {
     (b.start || '').localeCompare(a.start || '')
   );
 
-  const todayPST = getTodayPSTDateString();
+  const todayPST = getTodayPSTDateString(referenceDate);
   let out = '## Workouts (most recent first)\n';
 
   for (const w of sorted) {
@@ -279,7 +279,7 @@ function summarizeWorkouts(workoutArr) {
 // Food summarizer
 // =====================================================================
 
-function summarizeFood(foodArr) {
+function summarizeFood(foodArr, referenceDate) {
   if (!foodArr || foodArr.length === 0) {
     return '## Food logs\nNo food logged.\n\n';
   }
@@ -295,7 +295,7 @@ function summarizeFood(foodArr) {
 
   // Sort dates most recent first
   const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
-  const todayPST = getTodayPSTDateString();
+  const todayPST = getTodayPSTDateString(referenceDate);
 
   let out = '## Food logs (most recent day first)\n';
 
@@ -343,26 +343,27 @@ function summarizeProfile(profile) {
 // Main entry point
 // =====================================================================
 
-export function summarizeForLLM(inputData) {
+export function summarizeForLLM(inputData, options) {
   if (!inputData || typeof inputData !== 'object') {
     return '## ERROR\nNo input data provided.\n';
   }
+  const referenceDate = options && options.referenceDate ? options.referenceDate : null;
 
   const profile = inputData.userProfile || {};
   const whoop = inputData.whoopData || {};
   const foodLogs = inputData.foodLogs || [];
 
-  const todayPST = getTodayPSTDateString();
+  const todayPST = getTodayPSTDateString(referenceDate);
 
   let out = '# DATA SUMMARY (pre-computed, ground truth)\n\n';
   out += 'Generated for date: **' + todayPST + ' PST**\n';
   out += 'All times converted to PST. All durations in hours/minutes. All percentages pre-computed — DO NOT recompute, use these values directly.\n\n';
   out += '---\n\n';
   out += summarizeProfile(profile);
-  out += summarizeRecovery(whoop.recovery, whoop.sleep);
-  out += summarizeSleep(whoop.sleep);
-  out += summarizeWorkouts(whoop.workout);
-  out += summarizeFood(foodLogs);
+  out += summarizeRecovery(whoop.recovery, whoop.sleep, referenceDate);
+  out += summarizeSleep(whoop.sleep, referenceDate);
+  out += summarizeWorkouts(whoop.workout, referenceDate);
+  out += summarizeFood(foodLogs, referenceDate);
   out += '---\n';
   out += '**END OF DATA SUMMARY**\n';
 

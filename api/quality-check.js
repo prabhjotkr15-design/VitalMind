@@ -325,7 +325,7 @@ export async function judgeBrief({ aiOutputId, userId }) {
   const medicalRubric = loadMedicalRubric();
 
   // CRITICAL CHANGE: pre-process input_data into a clean markdown summary
-  const summaryMarkdown = summarizeForLLM(outputRow.input_data);
+  const summaryMarkdown = summarizeForLLM(outputRow.input_data, { referenceDate: outputRow.created_at });
 
   const { mode, segments } = splitBriefIntoParagraphs(outputRow.output_text);
 
