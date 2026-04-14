@@ -619,11 +619,13 @@ app.post('/api/symptom-prefs', async (req, res) => {
 
 app.post('/api/quality-check/brief', async (req, res) => {
   const auth = req.headers.authorization;
+  if (!auth || auth !== 'Bearer ' + process.env.CRON_SECRET) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   try {
     const { judgeBrief } = await import('./quality-check.js');
     const { ai_output_id, user_id } = req.body || {};
+    if (!ai_output_id && !user_id) {
       return res.status(400).json({ error: 'Provide ai_output_id or user_id' });
     }
     const result = await judgeBrief({ aiOutputId: ai_output_id, userId: user_id });
