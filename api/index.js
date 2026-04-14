@@ -617,6 +617,23 @@ app.post('/api/symptom-prefs', async (req, res) => {
 });
 
 
+app.post('/api/quality-check/brief', async (req, res) => {
+  const auth = req.headers.authorization;
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  try {
+    const { judgeBrief } = await import('./quality-check.js');
+    const { ai_output_id, user_id } = req.body || {};
+      return res.status(400).json({ error: 'Provide ai_output_id or user_id' });
+    }
+    const result = await judgeBrief({ aiOutputId: ai_output_id, userId: user_id });
+    return res.json(result);
+  } catch(err) {
+    console.error('Quality check error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/symptom-checkin', async (req, res) => {
   const handler = (await import('./symptom-checkin.js')).default;
   return handler(req, res);
