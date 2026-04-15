@@ -38,7 +38,7 @@ export default async function handler(req, res) {
           .from('symptom_logs')
           .select('id')
           .eq('user_id', profile.user_id)
-          .gte('logged_at', today + 'T00:00:00')
+          .gte('logged_at', today + 'T07:00:00')
           .limit(1);
 
         if (existing && existing.length > 0) { skipped++; continue; }
