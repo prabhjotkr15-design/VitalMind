@@ -1,9 +1,10 @@
 import axios from 'axios';
 import { createClient } from '@supabase/supabase-js';
+import { getUserTimezone, hourInTZ, parseUserStatedTimeToUTC } from './timezone-utils.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-function getMealType(textContent) {
+function getMealType(textContent, timezone) {
   if (textContent) {
     const lower = textContent.toLowerCase();
     if (lower.includes('breakfast') || lower.includes('morning meal')) return 'breakfast';
@@ -12,17 +13,16 @@ function getMealType(textContent) {
     if (lower.includes('snack') || lower.includes('snacking')) return 'snack';
     if (lower.match(/for (my )?brunch/)) return 'lunch';
   }
-  const now = new Date();
-  const utcHour = now.getUTCHours();
-  const pstHour = (utcHour - 7 + 24) % 24;
-  if (pstHour < 11) return 'breakfast';
-  if (pstHour < 15) return 'lunch';
-  if (pstHour < 17) return 'snack';
+  const userHour = hourInTZ(timezone, new Date());
+  if (userHour < 11) return 'breakfast';
+  if (userHour < 15) return 'lunch';
+  if (userHour < 17) return 'snack';
   return 'dinner';
 }
 
 export async function analyzeFood(userId, type, content, imageBase64, imageMimeType, userProfile) {
-  const autoMealType = getMealType(content);
+  const userTimezone = await getUserTimezone(userId);
+  const autoMealType = getMealType(content, userTimezone);
   const conditionsText = userProfile?.conditions?.filter(c => c !== 'none').join(', ') || 'none';
   const dietText = userProfile?.diet?.filter(d => d !== 'none').join(', ') || 'none';
 
@@ -44,10 +44,12 @@ Respond ONLY with valid JSON, no markdown, no backticks. Format:
   "total": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0},
   "flags": ["any dietary warnings based on their conditions"],
   "meal_type": "breakfast|lunch|dinner|snack",
-  "insight": "One sentence connecting this meal to their health conditions"
+  "insight": "One sentence connecting this meal to their health conditions",
+  "stated_time": "HH:MM in 24-hour format if user explicitly mentioned a time they ate, otherwise null",
+  "stated_timezone": "IANA timezone name (e.g. Asia/Kolkata, America/Los_Angeles, Europe/London) if user explicitly mentioned a timezone or country, otherwise null"
 }
 
-For flags: if FODMAP diet, flag garlic, onion, wheat, lactose, legumes. If endometriosis, flag inflammatory foods (processed, high sugar, alcohol, red meat). If keto, flag high carbs. Be specific about which ingredient triggered the flag.`;
+For flags: if FODMAP diet, flag garlic, onion, wheat, lactose, legumes. If endometriosis, flag inflammatory foods (processed, high sugar, alcohol, red meat). If keto, flag high carbs. Be specific about which ingredient triggered the flag.\n\nFor stated_time: if user explicitly mentions when they ate ("at 7pm", "this morning at 8", "around noon"), extract as HH:MM 24-hour format (e.g. "19:00", "08:00", "12:00"). Otherwise null. Do NOT guess.\n\nFor stated_timezone: if user explicitly mentions a timezone abbreviation (IST, EST, GMT, UTC) or country/city, return the IANA timezone name. Common mappings: IST→Asia/Kolkata, EST→America/New_York, PST→America/Los_Angeles, GMT/UTC→UTC, BST/London→Europe/London, CET→Europe/Berlin. If no timezone mentioned, return null.`;
 
   if (type === 'photo' && imageBase64) {
     messages = [{
@@ -103,9 +105,18 @@ For flags: if FODMAP diet, flag garlic, onion, wheat, lactose, legumes. If endom
     throw err;
   }
 
+  // Compute logged_at: if user stated a time, parse it in the appropriate timezone
+  let loggedAt = new Date().toISOString();
+  if (parsed.stated_time) {
+    const tzForParse = parsed.stated_timezone || userTimezone;
+    const parsedISO = parseUserStatedTimeToUTC(parsed.stated_time, tzForParse, new Date());
+    if (parsedISO) loggedAt = parsedISO;
+  }
+
   await supabase.from('food_logs').insert({
     user_id: userId,
     meal_type: autoMealType,
+    logged_at: loggedAt,
     description: parsed.description,
     calories: calculatedTotal.calories,
     protein: calculatedTotal.protein,
