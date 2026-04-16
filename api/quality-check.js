@@ -15,6 +15,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { summarizeForLLM } from './whoop-summarizer.js';
+import { getUserTimezone } from './timezone-utils.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -325,7 +326,8 @@ export async function judgeBrief({ aiOutputId, userId }) {
   const medicalRubric = loadMedicalRubric();
 
   // CRITICAL CHANGE: pre-process input_data into a clean markdown summary
-  const summaryMarkdown = summarizeForLLM(outputRow.input_data, { referenceDate: outputRow.created_at });
+  const userTZ = await getUserTimezone(outputRow.user_id);
+  const summaryMarkdown = summarizeForLLM(outputRow.input_data, { referenceDate: outputRow.created_at, timezone: userTZ });
 
   const { mode, segments } = splitBriefIntoParagraphs(outputRow.output_text);
 
