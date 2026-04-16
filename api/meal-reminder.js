@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const mealType = req.body?.meal || 'meal';
+  const mealType = (req.body?.meal || 'meal').toLowerCase();
   const templateSid = templates[mealType];
   if (!templateSid) return res.status(400).json({ error: 'Invalid meal type' });
 
