@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import twilio from 'twilio';
+import { getUserTimezone, startOfTodayUTC } from './timezone-utils.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -21,9 +22,7 @@ export default async function handler(req, res) {
   const templateSid = templates[mealType];
   if (!templateSid) return res.status(400).json({ error: 'Invalid meal type' });
 
-  const now = new Date();
-  const pst = new Date(now.getTime() - 7 * 60 * 60 * 1000);
-  const today = pst.toISOString().split('T')[0];
+
 
   try {
     const { data: users } = await supabase.from('users').select('id, phone');
@@ -36,11 +35,13 @@ export default async function handler(req, res) {
       if (!user.phone) { skipped++; continue; }
 
       try {
+        const userTZ = await getUserTimezone(user.id);
+        const todayStartUTC = startOfTodayUTC(userTZ);
         const { data: meals } = await supabase
           .from('food_logs')
           .select('meal_type')
           .eq('user_id', user.id)
-          .gte('logged_at', today + 'T00:00:00');
+          .gte('logged_at', todayStartUTC);
 
         const alreadyLogged = (meals || []).some(function(m) {
           return m.meal_type === mealType;
