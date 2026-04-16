@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { decrypt } from './encrypt.js';
 import { refreshWhoopToken } from './auth.js';
+import { getUserTimezone, dateStringInTZ } from './timezone-utils.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -35,7 +36,6 @@ export default async function handler(req, res) {
 
     let sent = 0;
     let failed = 0;
-    const weekAgo = new Date(Date.now() - 7 * 86400000 - 7 * 60 * 60 * 1000).toISOString().split('T')[0];
 
     for (const tokenRow of allTokens) {
       try {
@@ -43,8 +43,8 @@ export default async function handler(req, res) {
         if (!user?.email) continue;
 
         const { data: profile } = await supabase.from('user_profiles').select().eq('user_id', tokenRow.user_id).single();
-
-        let accessToken;
+        const userTZ = await getUserTimezone(tokenRow.user_id);
+        const weekAgo = dateStringInTZ(userTZ, new Date(Date.now() - 7 * 86400000));
         try { accessToken = decrypt(tokenRow.access_token); }
         catch(e) { accessToken = tokenRow.access_token; }
 
