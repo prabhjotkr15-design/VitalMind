@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import twilio from 'twilio';
+import { getUserTimezone, startOfTodayUTC } from './timezone-utils.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -24,21 +25,21 @@ export default async function handler(req, res) {
     let sent = 0;
     let skipped = 0;
 
-    const now = new Date();
-    const pst = new Date(now.getTime() - 7 * 60 * 60 * 1000);
-    const today = pst.toISOString().split('T')[0];
+
 
     for (const profile of profiles) {
       try {
         const { data: user } = await supabase.from('users').select('phone').eq('id', profile.user_id).single();
         if (!user?.phone) { skipped++; continue; }
 
-        // Skip if already logged today
+        // Skip if already logged today (in user's local timezone)
+        const userTZ = await getUserTimezone(profile.user_id);
+        const todayStartUTC = startOfTodayUTC(userTZ);
         const { data: existing } = await supabase
           .from('symptom_logs')
           .select('id')
           .eq('user_id', profile.user_id)
-          .gte('logged_at', today + 'T07:00:00')
+          .gte('logged_at', todayStartUTC)
           .limit(1);
 
         if (existing && existing.length > 0) { skipped++; continue; }
