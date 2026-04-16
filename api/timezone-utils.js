@@ -191,8 +191,10 @@ export function parseUserStatedTimeToUTC(timeStr, timezone, referenceUTC) {
   const todayMidnightUTC = new Date(localMidnightToUTC(todayLocal, timezone));
   const candidateUTC = new Date(todayMidnightUTC.getTime() + (h * 60 + mi) * 60 * 1000);
 
-  // If the candidate time is in the future, the user must have meant yesterday
-  if (candidateUTC.getTime() > refUTC.getTime()) {
+  // If the candidate time is more than 2 hours in the future, user must have meant yesterday.
+  // Otherwise (small future drift), assume they meant today (clock skew, slight delay between eating and logging).
+  const futureDeltaMs = candidateUTC.getTime() - refUTC.getTime();
+  if (futureDeltaMs > 2 * 60 * 60 * 1000) {
     return new Date(candidateUTC.getTime() - 24 * 60 * 60 * 1000).toISOString();
   }
   return candidateUTC.toISOString();
