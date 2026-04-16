@@ -282,7 +282,8 @@
             height_cm: height ? (parseFloat(height) * 2.54) : null,
             wearable: wearable,
             brief_hour: 7,
-            symptom_method: selectedSymptomMethod
+            symptom_method: selectedSymptomMethod,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
           })
         });
       } catch(e) {}

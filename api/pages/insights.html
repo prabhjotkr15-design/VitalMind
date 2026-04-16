@@ -273,6 +273,24 @@
       <span class="bt-saved" id="btSaved"></span>
     </div>
 
+    <div class="brief-time-section">
+      <div class="bt-label">Timezone</div>
+      <select class="bt-select" id="tzSelect" onchange="updateTimezone(this.value)" style="min-width:220px">
+        <option value="America/Los_Angeles">America/Los_Angeles (PT)</option>
+        <option value="America/Denver">America/Denver (MT)</option>
+        <option value="America/Chicago">America/Chicago (CT)</option>
+        <option value="America/New_York">America/New_York (ET)</option>
+        <option value="Europe/London">Europe/London (GMT/BST)</option>
+        <option value="Europe/Paris">Europe/Paris (CET)</option>
+        <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+        <option value="Asia/Singapore">Asia/Singapore (SGT)</option>
+        <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+        <option value="Australia/Sydney">Australia/Sydney (AEST)</option>
+        <option value="UTC">UTC</option>
+      </select>
+      <span class="bt-saved" id="tzSaved"></span>
+    </div>
+
     
     <div class="symptom-prefs-section" id="symptomPrefsSection">
       <div class="sp-head">
@@ -637,6 +655,48 @@
       } catch(e) {}
     }
     loadBriefTime();
+
+    async function loadTimezone() {
+      try {
+        var res = await fetch('/api/timezone');
+        var data = await res.json();
+        var sel = document.getElementById('tzSelect');
+        if (data && data.timezone) {
+          var found = false;
+          for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value === data.timezone) { sel.selectedIndex = i; found = true; break; }
+          }
+          if (!found) {
+            var opt = document.createElement('option');
+            opt.value = data.timezone;
+            opt.textContent = data.timezone;
+            opt.selected = true;
+            sel.appendChild(opt);
+          }
+        }
+      } catch(e) {}
+    }
+
+    async function updateTimezone(tz) {
+      var savedEl = document.getElementById('tzSaved');
+      try {
+        var res = await fetch('/api/timezone', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ timezone: tz })
+        });
+        if (res.ok) {
+          savedEl.textContent = 'Saved';
+          setTimeout(function() { savedEl.textContent = ''; }, 2000);
+        } else {
+          savedEl.textContent = 'Error';
+        }
+      } catch(e) {
+        savedEl.textContent = 'Error';
+      }
+    }
+
+    loadTimezone();
 
   
     async function checkOnboardingState() {

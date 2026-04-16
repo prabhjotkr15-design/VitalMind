@@ -528,6 +528,28 @@ app.get('/api/brief-time-current', async (req, res) => {
   res.json({ hour: data?.brief_hour ?? 7 });
 });
 
+app.get('/api/timezone', async (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not logged in' });
+  const { createClient: cc } = await import('@supabase/supabase-js');
+  const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const { data } = await sb.from('user_profiles').select('timezone').eq('user_id', user.userId).single();
+  res.json({ timezone: data?.timezone || 'America/Los_Angeles' });
+});
+
+app.post('/api/timezone', async (req, res) => {
+  const user = getUser(req);
+  if (!user) return res.status(401).json({ error: 'Not logged in' });
+  const tz = req.body?.timezone;
+  if (!tz || typeof tz !== 'string') return res.status(400).json({ error: 'Invalid timezone' });
+  try { new Intl.DateTimeFormat('en-US', { timeZone: tz }).format(new Date()); } catch(e) { return res.status(400).json({ error: 'Invalid IANA timezone' }); }
+  const { createClient: cc } = await import('@supabase/supabase-js');
+  const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  await sb.from('user_profiles').update({ timezone: tz }).eq('user_id', user.userId);
+  try { const tzUtils = await import('./timezone-utils.js'); tzUtils.clearTimezoneCache(user.userId); } catch(e) {}
+  res.json({ ok: true });
+});
+
 
 app.get('/onboarding', (req, res) => {
   const user = getUser(req);
@@ -552,6 +574,7 @@ app.post('/api/onboarding', async (req, res) => {
       wearable: req.body.wearable || 'none',
       brief_hour: req.body.brief_hour || 7,
       symptom_method: req.body.symptom_method || 'off',
+      timezone: req.body.timezone || 'America/Los_Angeles',
       onboarding_complete: true
     };
     await sb.from('user_profiles').upsert(data, { onConflict: 'user_id' });
