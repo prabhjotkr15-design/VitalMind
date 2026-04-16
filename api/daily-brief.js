@@ -4,6 +4,7 @@ import { Resend } from 'resend';
 import { decrypt } from './encrypt.js';
 import { refreshWhoopToken } from './auth.js';
 import { summarizeForLLM } from './whoop-summarizer.js';
+import { getUserTimezone, hourInTZ, dateStringInTZ } from './timezone-utils.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -24,7 +25,7 @@ async function fetchWhoopData(accessToken) {
   };
 }
 
-async function generateInsight(whoopData, userProfile, foodLogs) {
+async function generateInsight(whoopData, userProfile, foodLogs, timezone) {
   const goalLabels = { better_sleep: 'better sleep', more_energy: 'more energy', lose_weight: 'weight loss', peak_performance: 'peak performance' };
   const goalText = goalLabels[userProfile?.goal] || 'overall health';
   const conditionsText = userProfile?.conditions?.filter(c => c !== 'none').join(', ') || 'none';
@@ -39,7 +40,7 @@ async function generateInsight(whoopData, userProfile, foodLogs) {
     userProfile: { conditions: conditionsText, diet: dietText, goal: goalText },
     whoopData,
     foodLogs,
-  });
+  }, { timezone });
 
   const claudeRes = await axios.post(
     'https://api.anthropic.com/v1/messages',
@@ -145,9 +146,9 @@ export default async function handler(req, res) {
         const { data: profile } = await supabase.from('user_profiles').select().eq('user_id', tokenRow.user_id).single();
 
         const briefHour = profile?.brief_hour ?? 7;
-        const now = new Date();
-        const pstHour = (now.getUTCHours() - 7 + 24) % 24;
-        if (pstHour !== briefHour) { continue; }
+        const userTZ = await getUserTimezone(tokenRow.user_id);
+        const userHour = hourInTZ(userTZ, new Date());
+        if (userHour !== briefHour) { continue; }
 
         let whoopData = await fetchWhoopData(accessToken);
 
@@ -168,11 +169,12 @@ export default async function handler(req, res) {
         
         let userFoodLogs = [];
         try {
-          const yday = new Date(Date.now() - 86400000 - 7*60*60*1000).toISOString().split('T')[0];
-          const { data: fl } = await supabase.from('food_logs').select().eq('user_id', tokenRow.user_id).gte('logged_at', yday + 'T00:00:00').order('logged_at', { ascending: true });
+          const todayLocal = dateStringInTZ(userTZ, new Date());
+          const ydayLocal = dateStringInTZ(userTZ, new Date(Date.now() - 86400000));
+          const { data: fl } = await supabase.from('food_logs').select().eq('user_id', tokenRow.user_id).gte('logged_at', ydayLocal + 'T00:00:00').order('logged_at', { ascending: true });
           userFoodLogs = fl || [];
         } catch(e) {}
-        const { insight, firstName, latestRecovery, latestHRV, latestRHR, inputPayload } = await generateInsight(whoopData, profile, userFoodLogs);
+        const { insight, firstName, latestRecovery, latestHRV, latestRHR, inputPayload } = await generateInsight(whoopData, profile, userFoodLogs, userTZ);
 
         // Log to ai_outputs for quality evaluation
         let aiOutputId = null;

@@ -4,39 +4,19 @@
 // and the judges (quality-check.js) so they work from identical pre-computed facts.
 //
 // Key principles:
-// - All times converted to local user timezone (PST for current users)
+// - All times converted to user's local timezone (via timezone-utils.js)
 // - All durations in ms converted to "Xh Ym" format
 // - Percentages pre-computed (we don't trust LLM math)
-// - Explicit relative date labels (yesterday, 2 days ago) so the LLM can't confuse dates
-// - Summary only, no raw data — forces the LLM to work from clean ground truth
+// - Explicit relative date labels (yesterday, 2 days ago)
+// - Summary only, no raw data
+
+import { dateStringInTZ, utcToTZParts } from './timezone-utils.js';
+
+const DEFAULT_TZ = 'America/Los_Angeles';
 
 // =====================================================================
 // Time and date helpers
 // =====================================================================
-
-// Convert a UTC ISO string to a Date object in PST (-07:00 offset)
-// Returns { date: 'YYYY-MM-DD', time: 'HH:MM AM/PM', dayOfWeek: 'Tuesday' }
-function utcToPST(utcISOString) {
-  if (!utcISOString) return null;
-  const utcDate = new Date(utcISOString);
-  // Apply -7 hour offset for PST
-  const pstDate = new Date(utcDate.getTime() - 7 * 60 * 60 * 1000);
-  const year = pstDate.getUTCFullYear();
-  const month = String(pstDate.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(pstDate.getUTCDate()).padStart(2, '0');
-  let hours = pstDate.getUTCHours();
-  const minutes = String(pstDate.getUTCMinutes()).padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12;
-  if (hours === 0) hours = 12;
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  return {
-    date: year + '-' + month + '-' + day,
-    time: hours + ':' + minutes + ' ' + ampm,
-    dayOfWeek: dayNames[pstDate.getUTCDay()],
-    fullPST: year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ' ' + ampm + ' PST',
-  };
-}
 
 // Convert milliseconds to "Xh Ym" format
 function msToHoursMinutes(ms) {
@@ -65,13 +45,10 @@ function relativeDateLabel(targetDateStr, todayDateStr) {
   return targetDateStr;
 }
 
-// Get today's date in PST as YYYY-MM-DD
-function getTodayPSTDateString(referenceDate) {
-  const now = referenceDate ? new Date(referenceDate) : new Date();
-  const pst = new Date(now.getTime() - 7 * 60 * 60 * 1000);
-  return pst.getUTCFullYear() + '-' +
-    String(pst.getUTCMonth() + 1).padStart(2, '0') + '-' +
-    String(pst.getUTCDate()).padStart(2, '0');
+// Get today's date as YYYY-MM-DD in user's timezone
+function getTodayDateString(timezone, referenceDate) {
+  const d = referenceDate ? new Date(referenceDate) : new Date();
+  return dateStringInTZ(timezone, d);
 }
 
 // Compute percentage change from one value to another, signed
@@ -93,23 +70,23 @@ function formatPct(pct) {
 // Recovery summarizer
 // =====================================================================
 
-function summarizeRecovery(recoveryArr, sleepArr, referenceDate) {
+function summarizeRecovery(recoveryArr, sleepArr, timezone, referenceDate) {
   if (!recoveryArr || recoveryArr.length === 0) {
     return '## Recovery\nNo recovery data available.\n';
   }
 
-  // Build a sleep_id → sleep start date lookup so we can attach dates to recoveries
+  // Build a sleep_id → sleep end date lookup so we can attach dates to recoveries
   const sleepIdToDate = {};
   for (const s of (sleepArr || [])) {
-    if (s.id && s.start) {
-      const pst = utcToPST(s.end || s.start);
-      if (pst) sleepIdToDate[s.id] = pst.date;
+    if (s.id && (s.end || s.start)) {
+      const parts = utcToTZParts(s.end || s.start, timezone);
+      if (parts) sleepIdToDate[s.id] = parts.date;
     }
   }
 
-  // Build records sorted most recent first (already are, but be safe)
+  // Build records sorted most recent first
   const records = recoveryArr.map(r => {
-    const date = sleepIdToDate[r.sleep_id] || (r.created_at ? utcToPST(r.created_at)?.date : null);
+    const date = sleepIdToDate[r.sleep_id] || (r.created_at ? utcToTZParts(r.created_at, timezone)?.date : null);
     return {
       date,
       recovery: r.score?.recovery_score ?? null,
@@ -123,11 +100,11 @@ function summarizeRecovery(recoveryArr, sleepArr, referenceDate) {
   if (records.length === 0) return '## Recovery\nNo recovery data available.\n';
 
   records.sort((a, b) => b.date.localeCompare(a.date));
-  const todayPST = getTodayPSTDateString(referenceDate);
+  const todayStr = getTodayDateString(timezone, referenceDate);
 
   let out = '## Recovery (most recent first)\n';
   for (const r of records) {
-    const label = relativeDateLabel(r.date, todayPST);
+    const label = relativeDateLabel(r.date, todayStr);
     out += '- ' + r.date + ' (' + label + '): Recovery ' + r.recovery + '% | HRV ' +
       (r.hrv ? r.hrv.toFixed(1) : 'n/a') + ' ms | RHR ' + r.rhr + ' bpm';
     if (r.spo2 !== null) out += ' | SpO2 ' + r.spo2.toFixed(1) + '%';
@@ -135,7 +112,7 @@ function summarizeRecovery(recoveryArr, sleepArr, referenceDate) {
     out += '\n';
   }
 
-  // Pre-computed percentage changes: most recent vs previous, and most recent vs 7-day
+  // Pre-computed percentage changes: most recent vs previous
   if (records.length >= 2) {
     const today = records[0];
     const yest = records[1];
@@ -160,7 +137,7 @@ function summarizeRecovery(recoveryArr, sleepArr, referenceDate) {
 // Sleep summarizer
 // =====================================================================
 
-function summarizeSleep(sleepArr, referenceDate) {
+function summarizeSleep(sleepArr, timezone, referenceDate) {
   if (!sleepArr || sleepArr.length === 0) {
     return '## Sleep\nNo sleep data available.\n';
   }
@@ -170,15 +147,15 @@ function summarizeSleep(sleepArr, referenceDate) {
     (b.end || '').localeCompare(a.end || '')
   );
 
-  const todayPST = getTodayPSTDateString(referenceDate);
+  const todayStr = getTodayDateString(timezone, referenceDate);
   let out = '## Sleep (most recent first)\n';
 
   for (const s of sorted) {
-    const startPST = utcToPST(s.start);
-    const endPST = utcToPST(s.end);
-    if (!startPST || !endPST) continue;
+    const startParts = utcToTZParts(s.start, timezone);
+    const endParts = utcToTZParts(s.end, timezone);
+    if (!startParts || !endParts) continue;
 
-    const label = relativeDateLabel(endPST.date, todayPST);
+    const label = relativeDateLabel(endParts.date, todayStr);
     const stages = s.score?.stage_summary || {};
     const inBedMs = stages.total_in_bed_time_milli || 0;
     const awakeMs = stages.total_awake_time_milli || 0;
@@ -194,8 +171,8 @@ function summarizeSleep(sleepArr, referenceDate) {
       (need.need_from_recent_strain_milli || 0);
     const debtMs = need.need_from_sleep_debt_milli || 0;
 
-    out += '\n### ' + endPST.date + ' (' + label + ')' + (s.nap ? ' [NAP]' : '') + '\n';
-    out += '- In bed: ' + startPST.fullPST + ' → ' + endPST.fullPST + '\n';
+    out += '\n### ' + endParts.date + ' (' + label + ')' + (s.nap ? ' [NAP]' : '') + '\n';
+    out += '- In bed: ' + startParts.fullString + ' → ' + endParts.fullString + '\n';
     out += '- Time in bed: ' + msToHoursMinutes(inBedMs) + ' (' + msToDecimalHours(inBedMs) + ' hours)\n';
     out += '- Time asleep: ' + msToHoursMinutes(asleepMs) + ' (' + msToDecimalHours(asleepMs) + ' hours)\n';
     out += '- Awake during night: ' + msToHoursMinutes(awakeMs) + '\n';
@@ -235,7 +212,7 @@ function summarizeSleep(sleepArr, referenceDate) {
 // Workout summarizer
 // =====================================================================
 
-function summarizeWorkouts(workoutArr, referenceDate) {
+function summarizeWorkouts(workoutArr, timezone, referenceDate) {
   if (!workoutArr || workoutArr.length === 0) {
     return '## Workouts\nNo workouts logged in the last 7 days.\n\n';
   }
@@ -244,17 +221,17 @@ function summarizeWorkouts(workoutArr, referenceDate) {
     (b.start || '').localeCompare(a.start || '')
   );
 
-  const todayPST = getTodayPSTDateString(referenceDate);
+  const todayStr = getTodayDateString(timezone, referenceDate);
   let out = '## Workouts (most recent first)\n';
 
   for (const w of sorted) {
-    const startPST = utcToPST(w.start);
-    const endPST = utcToPST(w.end);
-    if (!startPST || !endPST) continue;
+    const startParts = utcToTZParts(w.start, timezone);
+    const endParts = utcToTZParts(w.end, timezone);
+    if (!startParts || !endParts) continue;
     const durationMs = new Date(w.end).getTime() - new Date(w.start).getTime();
-    const label = relativeDateLabel(startPST.date, todayPST);
+    const label = relativeDateLabel(startParts.date, todayStr);
 
-    out += '- ' + startPST.date + ' (' + label + '): ' + (w.sport_name || 'unknown') +
+    out += '- ' + startParts.date + ' (' + label + '): ' + (w.sport_name || 'unknown') +
       ' | ' + msToHoursMinutes(durationMs) +
       ' | strain ' + (w.score?.strain?.toFixed(1) || 'n/a') +
       ' | avg HR ' + (w.score?.average_heart_rate || 'n/a') +
@@ -263,10 +240,10 @@ function summarizeWorkouts(workoutArr, referenceDate) {
 
   // Days since last workout
   if (sorted.length > 0) {
-    const lastStart = utcToPST(sorted[0].start);
-    if (lastStart) {
+    const lastStartParts = utcToTZParts(sorted[0].start, timezone);
+    if (lastStartParts) {
       const diffDays = Math.round(
-        (new Date(todayPST + 'T00:00:00Z').getTime() - new Date(lastStart.date + 'T00:00:00Z').getTime()) / (1000 * 60 * 60 * 24)
+        (new Date(todayStr + 'T00:00:00Z').getTime() - new Date(lastStartParts.date + 'T00:00:00Z').getTime()) / (1000 * 60 * 60 * 24)
       );
       out += '\nDays since last workout: ' + diffDays + '\n';
     }
@@ -279,28 +256,28 @@ function summarizeWorkouts(workoutArr, referenceDate) {
 // Food summarizer
 // =====================================================================
 
-function summarizeFood(foodArr, referenceDate) {
+function summarizeFood(foodArr, timezone, referenceDate) {
   if (!foodArr || foodArr.length === 0) {
     return '## Food logs\nNo food logged.\n\n';
   }
 
-  // Group by PST date
+  // Group by local date
   const byDate = {};
   for (const f of foodArr) {
-    const pst = utcToPST(f.logged_at);
-    if (!pst) continue;
-    if (!byDate[pst.date]) byDate[pst.date] = [];
-    byDate[pst.date].push({ ...f, pst });
+    const parts = utcToTZParts(f.logged_at, timezone);
+    if (!parts) continue;
+    if (!byDate[parts.date]) byDate[parts.date] = [];
+    byDate[parts.date].push({ ...f, localParts: parts });
   }
 
   // Sort dates most recent first
   const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
-  const todayPST = getTodayPSTDateString(referenceDate);
+  const todayStr = getTodayDateString(timezone, referenceDate);
 
   let out = '## Food logs (most recent day first)\n';
 
   for (const date of sortedDates) {
-    const label = relativeDateLabel(date, todayPST);
+    const label = relativeDateLabel(date, todayStr);
     const items = byDate[date].sort((a, b) => (a.logged_at || '').localeCompare(b.logged_at || ''));
 
     let totalCal = 0, totalP = 0, totalC = 0, totalF = 0;
@@ -313,7 +290,7 @@ function summarizeFood(foodArr, referenceDate) {
 
     out += '\n### ' + date + ' (' + label + ')\n';
     for (const item of items) {
-      out += '- ' + item.pst.time + ' [' + (item.meal_type || 'snack') + '] ' +
+      out += '- ' + item.localParts.time + ' [' + (item.meal_type || 'snack') + '] ' +
         (item.description || 'unnamed') + ': ' +
         (item.calories || 0) + ' cal, ' +
         (item.protein || 0) + 'g P, ' +
@@ -347,23 +324,25 @@ export function summarizeForLLM(inputData, options) {
   if (!inputData || typeof inputData !== 'object') {
     return '## ERROR\nNo input data provided.\n';
   }
+
   const referenceDate = options && options.referenceDate ? options.referenceDate : null;
+  const timezone = (options && options.timezone) ? options.timezone : DEFAULT_TZ;
 
   const profile = inputData.userProfile || {};
   const whoop = inputData.whoopData || {};
   const foodLogs = inputData.foodLogs || [];
 
-  const todayPST = getTodayPSTDateString(referenceDate);
+  const todayStr = getTodayDateString(timezone, referenceDate);
 
   let out = '# DATA SUMMARY (pre-computed, ground truth)\n\n';
-  out += 'Generated for date: **' + todayPST + ' PST**\n';
-  out += 'All times converted to PST. All durations in hours/minutes. All percentages pre-computed — DO NOT recompute, use these values directly.\n\n';
+  out += 'Generated for date: **' + todayStr + '** (timezone: ' + timezone + ')\n';
+  out += 'All times shown in local timezone (' + timezone + '). All durations in hours/minutes. All percentages pre-computed — DO NOT recompute, use these values directly.\n\n';
   out += '---\n\n';
   out += summarizeProfile(profile);
-  out += summarizeRecovery(whoop.recovery, whoop.sleep, referenceDate);
-  out += summarizeSleep(whoop.sleep, referenceDate);
-  out += summarizeWorkouts(whoop.workout, referenceDate);
-  out += summarizeFood(foodLogs, referenceDate);
+  out += summarizeRecovery(whoop.recovery, whoop.sleep, timezone, referenceDate);
+  out += summarizeSleep(whoop.sleep, timezone, referenceDate);
+  out += summarizeWorkouts(whoop.workout, timezone, referenceDate);
+  out += summarizeFood(foodLogs, timezone, referenceDate);
   out += '---\n';
   out += '**END OF DATA SUMMARY**\n';
 
