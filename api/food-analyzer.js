@@ -68,7 +68,7 @@ For flags: if FODMAP diet, flag garlic, onion, wheat, lactose, legumes. If endom
 
   const claudeRes = await axios.post(
     'https://api.anthropic.com/v1/messages',
-    { model: 'claude-sonnet-4-20250514', max_tokens: 600, temperature: 0, messages },
+    { model: type === 'photo' ? 'claude-opus-4-6' : 'claude-sonnet-4-20250514', max_tokens: 600, temperature: 0, messages },
     { headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' } }
   );
 
