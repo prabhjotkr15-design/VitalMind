@@ -238,7 +238,9 @@ export async function handleIncoming(req, res) {
           });
           const answer = (classifyRes.data?.content?.[0]?.text || '').trim().toUpperCase();
           isQuestion = answer.startsWith('A');
+          console.log('[CLASSIFY] Message:', body.trim(), '→ Answer:', answer, '→ isQuestion:', isQuestion);
         } catch (e) {
+          console.error('[CLASSIFY] Error:', e.message);
           isQuestion = false;
         }
       }
