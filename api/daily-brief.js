@@ -5,6 +5,7 @@ import { decrypt } from './encrypt.js';
 import { refreshWhoopToken } from './auth.js';
 import { summarizeForLLM } from './whoop-summarizer.js';
 import { getUserTimezone, hourInTZ, dateStringInTZ } from './timezone-utils.js';
+import { detectAnomalies } from './event-detector.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -165,6 +166,11 @@ export default async function handler(req, res) {
         }
 
         if (!whoopData.recovery?.length) { console.log('SKIP: still no recovery data after refresh'); continue; }
+
+        // Trigger anomaly detection (non-blocking — don't let it break the brief)
+        detectAnomalies(tokenRow.user_id, whoopData).catch(err => {
+          console.error('[EVENT-DETECTOR] Error during anomaly detection:', err.message);
+        });
 
         
         let userFoodLogs = [];

@@ -640,6 +640,57 @@ app.post('/api/symptom-prefs', async (req, res) => {
 });
 
 
+
+app.post('/api/investigate', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader !== 'Bearer ' + process.env.CRON_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  try {
+    const { detectAnomalies } = await import('./event-detector.js');
+    const { investigate } = await import('./health-investigator.js');
+    const userId = req.body?.user_id;
+    if (!userId) return res.status(400).json({ error: 'user_id required' });
+
+    // Option 1: Auto-detect anomalies from current WHOOP data
+    if (!req.body.event_type) {
+      const { decrypt } = await import('./encrypt.js');
+      const { refreshWhoopToken } = await import('./auth.js');
+      const { createClient: cc } = await import('@supabase/supabase-js');
+      const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+      const { data: tokenRow } = await sb.from('whoop_tokens').select('access_token').eq('user_id', userId).single();
+      if (!tokenRow) return res.status(400).json({ error: 'No WHOOP token for user' });
+      let accessToken;
+      try { accessToken = decrypt(tokenRow.access_token); } catch(e) { accessToken = tokenRow.access_token; }
+      const axios = (await import('axios')).default;
+      const headers = { Authorization: 'Bearer ' + accessToken };
+      const [recRes, slpRes] = await Promise.allSettled([
+        axios.get('https://api.prod.whoop.com/developer/v2/recovery?limit=7', { headers }),
+        axios.get('https://api.prod.whoop.com/developer/v2/activity/sleep?limit=7', { headers }),
+      ]);
+      const whoopData = {
+        recovery: recRes.status === 'fulfilled' ? recRes.value.data.records : [],
+        sleep: slpRes.status === 'fulfilled' ? slpRes.value.data.records : [],
+      };
+      const result = await detectAnomalies(userId, whoopData);
+      return res.json(result);
+    }
+
+    // Option 2: Manual event — force an investigation with specified event
+    const result = await investigate({
+      userId,
+      eventId: null,
+      eventType: req.body.event_type,
+      eventData: req.body.event_data || { description: 'Manual investigation triggered' },
+      severity: req.body.severity || 'medium',
+    });
+    return res.json(result);
+  } catch(e) {
+    console.error('[INVESTIGATE] Error:', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/quality-check/brief', async (req, res) => {
   const auth = req.headers.authorization;
   if (!auth || auth !== 'Bearer ' + process.env.CRON_SECRET) {
