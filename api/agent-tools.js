@@ -128,7 +128,7 @@ export const TOOL_SCHEMAS = [
 // Communication lock helpers
 // =====================================================================
 
-async function acquireMessageLock(userId, agentName, cooldownMinutes = 120) {
+async function acquireMessageLock(userId, agentName, cooldownMinutes = 120, bypassCooldown = false) {
   const now = new Date();
 
   // Check if another agent holds the lock or cooldown is active
@@ -139,8 +139,8 @@ async function acquireMessageLock(userId, agentName, cooldownMinutes = 120) {
     .single();
 
   if (lock) {
-    // Check cooldown
-    if (lock.cooldown_until && new Date(lock.cooldown_until) > now) {
+    // Check cooldown (skip if user initiated the request)
+    if (!bypassCooldown && lock.cooldown_until && new Date(lock.cooldown_until) > now) {
       return { acquired: false, reason: 'cooldown_active', cooldown_until: lock.cooldown_until };
     }
     // Check if lock is held and not expired
@@ -535,13 +535,13 @@ async function executeCheckPastInvestigations(userId, input) {
   return { investigations: results, count: results.length };
 }
 
-async function executeSendWhatsapp(userId, input, investigationId) {
+async function executeSendWhatsapp(userId, input, investigationId, bypassCooldown = false) {
   const message = input.message;
   if (!message || message.length === 0) return { error: 'Empty message' };
   if (message.length > 1000) return { error: 'Message too long (max 1000 characters)' };
 
-  // Acquire communication lock
-  const lock = await acquireMessageLock(userId, 'health_investigator');
+  // Acquire communication lock (bypass cooldown for user-initiated questions)
+  const lock = await acquireMessageLock(userId, 'health_investigator', 120, bypassCooldown);
   if (!lock.acquired) {
     return {
       sent: false,
@@ -630,7 +630,8 @@ async function executeSendEmail(userId, input, investigationId) {
 // Tool executor — routes Claude's tool calls to the right function
 // =====================================================================
 
-export async function executeTool(toolName, userId, input, investigationId) {
+export async function executeTool(toolName, userId, input, investigationId, options = {}) {
+  const bypassCooldown = options.bypassCooldown || false;
   switch (toolName) {
     case 'fetch_recovery':
       return await executeFetchRecovery(userId, input);
@@ -647,7 +648,7 @@ export async function executeTool(toolName, userId, input, investigationId) {
     case 'check_past_investigations':
       return await executeCheckPastInvestigations(userId, input);
     case 'send_whatsapp':
-      return await executeSendWhatsapp(userId, input, investigationId);
+      return await executeSendWhatsapp(userId, input, investigationId, bypassCooldown);
     case 'send_email':
       return await executeSendEmail(userId, input, investigationId);
     default:

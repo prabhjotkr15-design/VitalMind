@@ -227,7 +227,7 @@ export async function investigate({ userId, eventId, eventType, eventData, sever
           // Execute the tool
           let toolResult;
           try {
-            toolResult = await executeTool(toolName, userId, toolInput, investigationId);
+            toolResult = await executeTool(toolName, userId, toolInput, investigationId, { bypassCooldown: eventType === 'user_question' });
           } catch (toolError) {
             toolResult = { error: 'Tool execution failed: ' + toolError.message };
           }
