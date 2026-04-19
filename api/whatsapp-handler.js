@@ -213,12 +213,8 @@ export async function handleIncoming(req, res) {
     if (numMedia === 0 && body.trim()) {
       const lower = body.trim().toLowerCase();
 
-      // Quick shortcuts — no Claude call needed
+      // Let Claude classify: health question, follow-up, or food description?
       let isQuestion = false;
-      if (lower === 'why' || lower === 'more' || lower === 'tell me more') {
-        isQuestion = true;
-      } else {
-        // Let Claude classify: health question or food description?
         try {
           const axios = (await import('axios')).default;
           const classifyRes = await axios.post('https://api.anthropic.com/v1/messages', {
@@ -235,14 +231,29 @@ export async function handleIncoming(req, res) {
         } catch (e) {
           isQuestion = false;
         }
-      }
 
       if (isQuestion) {
-        // Non-blocking — send immediate reply, then investigate in background
-        // Fire investigation request BEFORE replying (Vercel kills function after response)
-        const axios = (await import('axios')).default;
-        const investigateUrl = 'https://vitalmindai.community/api/investigate';
-        const investigatePromise = axios.post(investigateUrl, {
+        // Check for recent investigation (within 1 hour) — user might be following up
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+        const { data: recentConclusions } = await supabase
+          .from('agent_traces')
+          .select('reasoning')
+          .eq('user_id', user.id)
+          .eq('action', 'conclude')
+          .gte('created_at', oneHourAgo)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (recentConclusions && recentConclusions.length > 0 && recentConclusions[0].reasoning) {
+          // Serve stored conclusion — no new investigation needed
+          let detail = recentConclusions[0].reasoning;
+          if (detail.length > 1500) detail = detail.substring(0, 1500) + '...';
+          return reply(res, detail);
+        }
+
+        // No recent investigation — start a new one
+        const axiosLib = (await import('axios')).default;
+        axiosLib.post('https://vitalmindai.community/api/investigate', {
           user_id: user.id,
           event_type: 'user_question',
           event_data: { question: body.trim(), description: 'User asked: ' + body.trim() },
@@ -253,7 +264,6 @@ export async function handleIncoming(req, res) {
         }).catch(err => {
           console.error('[INVESTIGATOR] Failed to trigger investigation:', err.message);
         });
-        // Small delay to ensure the HTTP request is dispatched before Vercel shuts down
         await new Promise(r => setTimeout(r, 500));
         return reply(res, '🔍 Good question — let me look into your data. I\'ll message you with what I find.');
       }
