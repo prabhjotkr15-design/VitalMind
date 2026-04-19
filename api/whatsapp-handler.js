@@ -218,11 +218,31 @@ export async function handleIncoming(req, res) {
     // ROUTE 2.5: Health question — triggers investigator
     if (numMedia === 0 && body.trim()) {
       const lower = body.trim().toLowerCase();
-      const isQuestion = lower === 'why' || lower === 'more' || lower === 'tell me more'
-        || lower.startsWith('why is') || lower.startsWith('why did')
-        || lower.startsWith('what caused') || lower.startsWith('what's causing')
-        || lower.startsWith('how come') || lower.startsWith('what should i')
-        || lower.startsWith('what can i') || lower.startsWith('help me understand');
+
+      // Quick shortcuts — no Claude call needed
+      let isQuestion = false;
+      if (lower === 'why' || lower === 'more' || lower === 'tell me more') {
+        isQuestion = true;
+      } else {
+        // Let Claude classify: health question or food description?
+        try {
+          const axios = (await import('axios')).default;
+          const classifyRes = await axios.post('https://api.anthropic.com/v1/messages', {
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 10,
+            temperature: 0,
+            messages: [{ role: 'user', content: 'Classify this message from a health app user. Is it (A) a question about their health, body, recovery, sleep, symptoms, or wellbeing, or (B) a description of food they ate or want to log?\n\nMessage: "' + body.trim().replace(/"/g, '\\"') + '"\n\nReply with ONLY the letter A or B.' }]
+          }, {
+            headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+            timeout: 5000,
+          });
+          const answer = (classifyRes.data?.content?.[0]?.text || '').trim().toUpperCase();
+          isQuestion = answer.startsWith('A');
+        } catch (e) {
+          isQuestion = false;
+        }
+      }
+
       if (isQuestion) {
         // Non-blocking — send immediate reply, then investigate in background
         reply(res, '🔍 Good question — let me look into your data. I\'ll message you with what I find.');
