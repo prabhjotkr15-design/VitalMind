@@ -239,10 +239,10 @@ export async function handleIncoming(req, res) {
 
       if (isQuestion) {
         // Non-blocking — send immediate reply, then investigate in background
-        reply(res, '🔍 Good question — let me look into your data. I\'ll message you with what I find.');
-        // Trigger investigation as a separate Vercel function (survives after this response ends)
+        // Fire investigation request BEFORE replying (Vercel kills function after response)
         const axios = (await import('axios')).default;
-        axios.post((process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : 'https://vitalmindai.community') + '/api/investigate', {
+        const investigateUrl = 'https://vitalmindai.community/api/investigate';
+        const investigatePromise = axios.post(investigateUrl, {
           user_id: user.id,
           event_type: 'user_question',
           event_data: { question: body.trim(), description: 'User asked: ' + body.trim() },
@@ -253,7 +253,9 @@ export async function handleIncoming(req, res) {
         }).catch(err => {
           console.error('[INVESTIGATOR] Failed to trigger investigation:', err.message);
         });
-        return;
+        // Small delay to ensure the HTTP request is dispatched before Vercel shuts down
+        await new Promise(r => setTimeout(r, 500));
+        return reply(res, '🔍 Good question — let me look into your data. I\'ll message you with what I find.');
       }
     }
 
