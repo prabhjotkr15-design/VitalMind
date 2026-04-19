@@ -559,7 +559,7 @@ async function executeSendWhatsapp(userId, input, investigationId) {
 
   try {
     await twilioClient.messages.create({
-      body: '🔍 Health Insight\n\n' + message,
+      body: '🔍 Health Insight\n\n' + message + '\n\nReply \'why\' to dig deeper into this pattern.',
       from: FROM,
       to: 'whatsapp:' + user.phone,
     });

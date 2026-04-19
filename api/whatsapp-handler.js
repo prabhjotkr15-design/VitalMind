@@ -2,6 +2,7 @@ import twilio from 'twilio';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 import { detectSymptomAnomalies } from './event-detector.js';
+import { investigate } from './health-investigator.js';
 import { analyzeFood } from './food-analyzer.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -214,7 +215,31 @@ export async function handleIncoming(req, res) {
       return await processFoodClarificationReply(user, pending, body, profile, res);
     }
 
-    // ROUTE 3: New meal (photo, voice, or text)
+    // ROUTE 2.5: Health question — triggers investigator
+    if (numMedia === 0 && body.trim()) {
+      const lower = body.trim().toLowerCase();
+      const isQuestion = lower === 'why' || lower === 'more' || lower === 'tell me more'
+        || lower.startsWith('why is') || lower.startsWith('why did')
+        || lower.startsWith('what caused') || lower.startsWith('what's causing')
+        || lower.startsWith('how come') || lower.startsWith('what should i')
+        || lower.startsWith('what can i') || lower.startsWith('help me understand');
+      if (isQuestion) {
+        // Non-blocking — send immediate reply, then investigate in background
+        reply(res, '🔍 Good question — let me look into your data. I\'ll message you with what I find.');
+        investigate({
+          userId: user.id,
+          eventId: null,
+          eventType: 'user_question',
+          eventData: { question: body.trim(), description: 'User asked: ' + body.trim() },
+          severity: 'medium',
+        }).catch(err => {
+          console.error('[INVESTIGATOR] User question investigation error:', err.message);
+        });
+        return;
+      }
+    }
+
+        // ROUTE 3: New meal (photo, voice, or text)
     return await processNewMeal(user, body, numMedia, req, profile, conditionsText, dietText, res);
 
   } catch(err) {
