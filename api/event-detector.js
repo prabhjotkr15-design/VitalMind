@@ -275,3 +275,158 @@ export async function detectAnomalies(userId, whoopData) {
     investigation_result: result,
   };
 }
+
+
+// =====================================================================
+// Symptom anomaly detection (called after symptom check-in reply)
+// =====================================================================
+
+export async function detectSymptomAnomalies(userId, symptomData) {
+  const { pain, bloating, energy, mood } = symptomData;
+  const anomalies = [];
+
+  // High pain
+  if (pain >= 7) {
+    anomalies.push({
+      event_type: 'pain_spike',
+      severity: pain >= 9 ? 'high' : pain >= 8 ? 'medium' : 'low',
+      event_data: {
+        pain_score: pain,
+        bloating_score: bloating,
+        energy_score: energy,
+        mood_score: mood,
+        description: 'Pain reported at ' + pain + '/10',
+      },
+    });
+  }
+
+  // High bloating
+  if (bloating >= 7) {
+    anomalies.push({
+      event_type: 'bloating_spike',
+      severity: bloating >= 9 ? 'high' : bloating >= 8 ? 'medium' : 'low',
+      event_data: {
+        pain_score: pain,
+        bloating_score: bloating,
+        energy_score: energy,
+        mood_score: mood,
+        description: 'Bloating reported at ' + bloating + '/10',
+      },
+    });
+  }
+
+  // Very low energy
+  if (energy <= 3) {
+    anomalies.push({
+      event_type: 'low_energy',
+      severity: energy <= 1 ? 'high' : energy <= 2 ? 'medium' : 'low',
+      event_data: {
+        pain_score: pain,
+        bloating_score: bloating,
+        energy_score: energy,
+        mood_score: mood,
+        description: 'Energy reported at ' + energy + '/10',
+      },
+    });
+  }
+
+  // Very low mood
+  if (mood <= 3) {
+    anomalies.push({
+      event_type: 'low_mood',
+      severity: mood <= 1 ? 'high' : mood <= 2 ? 'medium' : 'low',
+      event_data: {
+        pain_score: pain,
+        bloating_score: bloating,
+        energy_score: energy,
+        mood_score: mood,
+        description: 'Mood reported at ' + mood + '/10',
+      },
+    });
+  }
+
+  // Combined distress — multiple bad signals at once
+  const badSignals = [pain >= 7, bloating >= 7, energy <= 3, mood <= 3].filter(Boolean).length;
+  if (badSignals >= 2 && anomalies.length > 0) {
+    // Upgrade the primary anomaly severity
+    anomalies[0].severity = 'high';
+    anomalies[0].event_data.combined_distress = true;
+    anomalies[0].event_data.bad_signal_count = badSignals;
+    anomalies[0].event_data.description += ' (combined with ' + (badSignals - 1) + ' other distress signal' + (badSignals > 2 ? 's' : '') + ')';
+  }
+
+  if (anomalies.length === 0) {
+    return { anomalies: [], investigated: false };
+  }
+
+  // Deduplication — same as WHOOP anomalies
+  const { data: existingQueue } = await supabase
+    .from('investigation_queue')
+    .select('id, status')
+    .eq('user_id', userId)
+    .in('status', ['queued', 'running'])
+    .limit(1);
+
+  if (existingQueue && existingQueue.length > 0) {
+    for (const a of anomalies) {
+      await supabase.from('agent_events').insert({
+        user_id: userId, event_type: a.event_type, event_data: a.event_data, severity: a.severity,
+      });
+    }
+    return { anomalies, investigated: false, reason: 'existing_investigation' };
+  }
+
+  const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+  const { data: recentInv } = await supabase
+    .from('agent_events')
+    .select('id')
+    .eq('user_id', userId)
+    .gte('created_at', sixHoursAgo)
+    .not('investigation_id', 'is', null)
+    .limit(1);
+
+  if (recentInv && recentInv.length > 0) {
+    for (const a of anomalies) {
+      await supabase.from('agent_events').insert({
+        user_id: userId, event_type: a.event_type, event_data: a.event_data, severity: a.severity,
+      });
+    }
+    return { anomalies, investigated: false, reason: 'recent_investigation' };
+  }
+
+  // Store events and queue investigation
+  const severityOrder = { high: 1, medium: 2, low: 3 };
+  anomalies.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+  const primary = anomalies[0];
+
+  const eventIds = [];
+  for (const a of anomalies) {
+    const { data: inserted } = await supabase.from('agent_events').insert({
+      user_id: userId, event_type: a.event_type, event_data: a.event_data, severity: a.severity,
+    }).select('id').single();
+    if (inserted) eventIds.push(inserted.id);
+  }
+
+  const primaryEventId = eventIds[0];
+  await supabase.from('investigation_queue').insert({
+    user_id: userId, event_id: primaryEventId,
+    priority: severityOrder[primary.severity], status: 'queued',
+  });
+
+  const combinedEventData = {
+    primary_anomaly: primary.event_data,
+    all_anomalies: anomalies.map(a => ({ type: a.event_type, severity: a.severity, ...a.event_data })),
+  };
+
+  let result;
+  try {
+    result = await investigate({
+      userId, eventId: primaryEventId, eventType: primary.event_type,
+      eventData: combinedEventData, severity: primary.severity,
+    });
+  } catch (err) {
+    result = { status: 'error', error: err.message };
+  }
+
+  return { anomalies, investigated: true, primary_event: primary, investigation_result: result };
+}

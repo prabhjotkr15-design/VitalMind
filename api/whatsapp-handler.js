@@ -1,6 +1,7 @@
 import twilio from 'twilio';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
+import { detectSymptomAnomalies } from './event-detector.js';
 import { analyzeFood } from './food-analyzer.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -85,6 +86,11 @@ async function processSymptomReply(user, body, res) {
     user_id: user.id, pain, bloating, energy, mood
   });
   await supabase.from('pending_meals').delete().eq('user_id', user.id);
+
+  // Trigger symptom anomaly detection (non-blocking)
+  detectSymptomAnomalies(user.id, { pain, bloating, energy, mood }).catch(err => {
+    console.error('[EVENT-DETECTOR] Symptom detection error:', err.message);
+  });
 
   const summary = pain >= 7 ? 'Tough day. I am sorry. ' : pain >= 4 ? 'Got it. ' : 'Glad you are feeling decent today. ';
   return reply(res, '✅ Logged: pain ' + pain + ', bloating ' + bloating + ', energy ' + energy + ', mood ' + mood + '\n\n' + summary + 'I will use this to find your patterns. See you tomorrow 💜');
