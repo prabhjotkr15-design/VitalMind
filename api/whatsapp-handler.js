@@ -2,7 +2,6 @@ import twilio from 'twilio';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 import { detectSymptomAnomalies } from './event-detector.js';
-import { investigate } from './health-investigator.js';
 import { analyzeFood } from './food-analyzer.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -210,11 +209,6 @@ export async function handleIncoming(req, res) {
       return await processSymptomReply(user, body, res);
     }
 
-    // ROUTE 2: Food clarification reply (text only, within 30 min)
-    if (pending && pending.input_type !== 'symptom' && numMedia === 0 && body.trim() && pendingAge < 30) {
-      return await processFoodClarificationReply(user, pending, body, profile, res);
-    }
-
     // ROUTE 2.5: Health question — triggers investigator
     if (numMedia === 0 && body.trim()) {
       const lower = body.trim().toLowerCase();
@@ -246,20 +240,29 @@ export async function handleIncoming(req, res) {
       if (isQuestion) {
         // Non-blocking — send immediate reply, then investigate in background
         reply(res, '🔍 Good question — let me look into your data. I\'ll message you with what I find.');
-        investigate({
-          userId: user.id,
-          eventId: null,
-          eventType: 'user_question',
-          eventData: { question: body.trim(), description: 'User asked: ' + body.trim() },
+        // Trigger investigation as a separate Vercel function (survives after this response ends)
+        const axios = (await import('axios')).default;
+        axios.post((process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : 'https://vitalmindai.community') + '/api/investigate', {
+          user_id: user.id,
+          event_type: 'user_question',
+          event_data: { question: body.trim(), description: 'User asked: ' + body.trim() },
           severity: 'medium',
+        }, {
+          headers: { 'Authorization': 'Bearer ' + process.env.CRON_SECRET, 'Content-Type': 'application/json' },
+          timeout: 120000,
         }).catch(err => {
-          console.error('[INVESTIGATOR] User question investigation error:', err.message);
+          console.error('[INVESTIGATOR] Failed to trigger investigation:', err.message);
         });
         return;
       }
     }
 
-        // ROUTE 3: New meal (photo, voice, or text)
+        // ROUTE 2: Food clarification reply (text only, within 30 min)
+    if (pending && pending.input_type !== 'symptom' && numMedia === 0 && body.trim() && pendingAge < 30) {
+      return await processFoodClarificationReply(user, pending, body, profile, res);
+    }
+
+    // ROUTE 3: New meal (photo, voice, or text)
     return await processNewMeal(user, body, numMedia, req, profile, conditionsText, dietText, res);
 
   } catch(err) {
