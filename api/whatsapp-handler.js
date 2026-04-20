@@ -209,67 +209,134 @@ export async function handleIncoming(req, res) {
       return await processSymptomReply(user, body, res);
     }
 
-    // ROUTE 2.5: Health question — triggers investigator
+    // ROUTE 2.5: Classify text messages — health question, follow-up, or food?
     if (numMedia === 0 && body.trim()) {
-      const lower = body.trim().toLowerCase();
+      const userMessage = body.trim();
 
-      // Let Claude classify: health question, follow-up, or food description?
-      let isQuestion = false;
-        try {
-          const axios = (await import('axios')).default;
-          const classifyRes = await axios.post('https://api.anthropic.com/v1/messages', {
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 10,
-            temperature: 0,
-            messages: [{ role: 'user', content: 'Classify this message from a health app user. Is it (A) a question about their health, body, recovery, sleep, symptoms, or wellbeing, or (B) a description of food they ate or want to log?\n\nMessage: "' + body.trim().replace(/"/g, '\\"') + '"\n\nReply with ONLY the letter A or B.' }]
-          }, {
-            headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-            timeout: 5000,
-          });
-          const answer = (classifyRes.data?.content?.[0]?.text || '').trim().toUpperCase();
-          isQuestion = answer.startsWith('A');
-        } catch (e) {
-          isQuestion = false;
-        }
+      // Build context for the classifier
+      let classifyContext = '';
+      if (pending && pending.input_type !== 'symptom' && pendingAge < 30) {
+        classifyContext += 'Context: The app asked the user about "' + (pending.original_input || '').substring(0, 100) + '" ' + Math.round(pendingAge) + ' minutes ago and is waiting for portion/preparation details.\n';
+      }
 
-      if (isQuestion) {
-        // Check for recent investigation (within 1 hour) — user might be following up
-        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-        const { data: recentConclusions } = await supabase
-          .from('agent_traces')
-          .select('reasoning')
+      // Check for recent findings sent to this user (within 1 hour)
+      let recentFinding = null;
+      try {
+        const { data: recentFindings } = await supabase
+          .from('agent_messages')
+          .select('payload, created_at')
           .eq('user_id', user.id)
-          .eq('action', 'conclude')
-          .gte('created_at', oneHourAgo)
+          .eq('message_type', 'finding_sent')
+          .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
           .order('created_at', { ascending: false })
           .limit(1);
+        if (recentFindings && recentFindings.length > 0) {
+          recentFinding = recentFindings[0];
+          const findingText = recentFinding.payload?.message || JSON.stringify(recentFinding.payload);
+          classifyContext += 'Context: The app recently sent this health finding to the user: "' + findingText.substring(0, 200) + '"\n';
+        }
+      } catch (e) {}
 
-        if (recentConclusions && recentConclusions.length > 0 && recentConclusions[0].reasoning) {
-          // Serve stored conclusion — no new investigation needed
-          let detail = recentConclusions[0].reasoning;
-          if (detail.length > 1500) detail = detail.substring(0, 1500) + '...';
-          return reply(res, detail);
+      if (!classifyContext) {
+        classifyContext = 'Context: No pending conversations or recent findings.\n';
+      }
+
+      // Three-way classification via Claude
+      let classification = 'B';
+      try {
+        const axiosClassify = (await import('axios')).default;
+        const classifyRes = await axiosClassify.post('https://api.anthropic.com/v1/messages', {
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 10,
+          temperature: 0,
+          messages: [{ role: 'user', content: 'You are routing a WhatsApp message in a health app. Classify as:\nA - New health question (about their recovery, sleep, symptoms, body, health, what to eat for health reasons, what to do)\nB - Food description, food logging, or answering a food-related question (portion size, preparation, ingredients)\nC - Follow-up or response to a recent health finding (asking for more detail, saying thanks, reacting to advice)\n\n' + classifyContext + '\nMessage: "' + userMessage.replace(/"/g, '\\"') + '"\n\nReply with ONLY the letter A, B, or C.' }]
+        }, {
+          headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+          timeout: 8000,
+        });
+        const answer = (classifyRes.data?.content?.[0]?.text || '').trim().toUpperCase();
+        if (answer.startsWith('A')) classification = 'A';
+        else if (answer.startsWith('C')) classification = 'C';
+        else classification = 'B';
+      } catch (classifyErr) {
+        console.error('[CLASSIFY] Error:', classifyErr.message);
+        classification = 'B';
+      }
+
+      // --- CATEGORY C: Follow-up on recent finding ---
+      if (classification === 'C') {
+        if (recentFinding && recentFinding.payload) {
+          try {
+            const axiosRewrite = (await import('axios')).default;
+            const findingText = recentFinding.payload.message || JSON.stringify(recentFinding.payload);
+            const rewriteRes = await axiosRewrite.post('https://api.anthropic.com/v1/messages', {
+              model: 'claude-sonnet-4-20250514',
+              max_tokens: 400,
+              temperature: 0,
+              messages: [{ role: 'user', content: 'You are a warm health companion for someone with chronic conditions. The user received this health finding:\n\n"' + findingText.replace(/"/g, '\\"') + '"\n\nThey replied: "' + userMessage.replace(/"/g, '\\"') + '"\n\nWrite a warm, helpful response under 800 characters. Use correlational language only. Reference specific data points from the finding. No diagnoses. No medication recommendations. If they said thanks, acknowledge warmly and offer to keep watching their data.' }]
+            }, {
+              headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+              timeout: 10000,
+            });
+            const userReply = rewriteRes.data?.content?.[0]?.text || '';
+            if (userReply) {
+              return reply(res, userReply);
+            }
+          } catch (rewriteErr) {
+            console.error('[FOLLOWUP] Rewrite error:', rewriteErr.message);
+          }
+          return reply(res, 'I recently looked into your data and found some patterns. Ask me something specific like "how is my sleep?" or "what should I eat?" and I\'ll investigate further.');
+        }
+        classification = 'A';
+      }
+
+      // --- CATEGORY A: New health question ---
+      if (classification === 'A') {
+        try {
+          const { data: evt } = await supabase.from('agent_events').insert({
+            user_id: user.id,
+            event_type: 'user_question',
+            event_data: { question: userMessage, description: 'User asked: ' + userMessage },
+            severity: 'medium',
+          }).select('id').single();
+          if (evt) {
+            await supabase.from('investigation_queue').insert({
+              user_id: user.id,
+              event_id: evt.id,
+              priority: 2,
+              status: 'queued',
+            });
+          }
+        } catch (queueErr) {
+          console.error('[INVESTIGATE] Queue insert error:', queueErr.message);
         }
 
-        // No recent investigation — start a new one
-        const axiosLib = (await import('axios')).default;
-        axiosLib.post('https://vitalmindai.community/api/investigate', {
-          user_id: user.id,
-          event_type: 'user_question',
-          event_data: { question: body.trim(), description: 'User asked: ' + body.trim() },
-          severity: 'medium',
-        }, {
-          headers: { 'Authorization': 'Bearer ' + process.env.CRON_SECRET, 'Content-Type': 'application/json' },
-          timeout: 120000,
-        }).catch(err => {
-          console.error('[INVESTIGATOR] Failed to trigger investigation:', err.message);
-        });
-        await new Promise(r => setTimeout(r, 500));
-        return reply(res, '🔍 Good question — let me look into your data. I\'ll message you with what I find.');
+        try {
+          fetch('https://vitalmindai.community/api/investigate', {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer ' + process.env.CRON_SECRET,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              user_id: user.id,
+              event_type: 'user_question',
+              event_data: { question: userMessage, description: 'User asked: ' + userMessage },
+              severity: 'medium',
+            }),
+            keepalive: true,
+          });
+        } catch (fetchErr) {
+          console.error('[INVESTIGATE] Fetch error:', fetchErr.message);
+        }
+
+        return reply(res, '🔍 Good question — looking into your data now. I\'ll message you with what I find.');
       }
+
+      // --- CATEGORY B: Food — fall through to Route 2 and Route 3 below ---
     }
 
-        // ROUTE 2: Food clarification reply (text only, within 30 min)
+            // ROUTE 2: Food clarification reply (text only, within 30 min)
     if (pending && pending.input_type !== 'symptom' && numMedia === 0 && body.trim() && pendingAge < 30) {
       return await processFoodClarificationReply(user, pending, body, profile, res);
     }
