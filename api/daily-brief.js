@@ -26,7 +26,7 @@ async function fetchWhoopData(accessToken) {
   };
 }
 
-async function generateInsight(whoopData, userProfile, foodLogs, timezone) {
+async function generateInsight(whoopData, userProfile, foodLogs, timezone, userId) {
   const goalLabels = { better_sleep: 'better sleep', more_energy: 'more energy', lose_weight: 'weight loss', peak_performance: 'peak performance' };
   const goalText = goalLabels[userProfile?.goal] || 'overall health';
   const conditionsText = userProfile?.conditions?.filter(c => c !== 'none').join(', ') || 'none';
@@ -42,6 +42,52 @@ async function generateInsight(whoopData, userProfile, foodLogs, timezone) {
     whoopData,
     foodLogs,
   }, { timezone });
+
+  // --- Phase 5D: Co-operation --- read investigator learnings and recent findings
+  let cooperationContext = '';
+  try {
+    const { data: learnings } = await supabase
+      .from('agent_learnings')
+      .select('pattern_type, pattern_description, confidence, evidence_count')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .order('confidence', { ascending: false })
+      .limit(10);
+
+    if (learnings && learnings.length > 0) {
+      cooperationContext += '\nPERSONALIZED PATTERNS (discovered by the Health Investigator from past investigations — reference these when relevant):\n';
+      for (const l of learnings) {
+        cooperationContext += '- [' + l.pattern_type + ', confidence: ' + (l.confidence * 100).toFixed(0) + '%, observed ' + l.evidence_count + 'x]: ' + l.pattern_description + '\n';
+      }
+    }
+
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data: recentMessages } = await supabase
+      .from('agent_messages')
+      .select('message_type, payload, created_at')
+      .eq('user_id', userId)
+      .eq('from_agent', 'health_investigator')
+      .in('message_type', ['finding_sent', 'investigation_complete', 'pattern_discovered'])
+      .gte('created_at', oneDayAgo)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (recentMessages && recentMessages.length > 0) {
+      cooperationContext += '\nRECENT INVESTIGATOR FINDINGS (from the last 24 hours — incorporate if relevant, do not repeat verbatim):\n';
+      for (const m of recentMessages) {
+        if (m.message_type === 'finding_sent' && m.payload?.message) {
+          cooperationContext += '- Finding sent to user: ' + m.payload.message.substring(0, 300) + '\n';
+        } else if (m.message_type === 'pattern_discovered' && m.payload?.description) {
+          cooperationContext += '- Pattern discovered: ' + m.payload.description + '\n';
+        } else if (m.message_type === 'investigation_complete' && m.payload?.conclusion) {
+          cooperationContext += '- Investigation conclusion: ' + m.payload.conclusion.substring(0, 300) + '\n';
+        }
+      }
+      cooperationContext += '\nIMPORTANT: The user may have already seen some of these findings via WhatsApp. Do not repeat the same message. Instead, build on it — add context, connect it to today\'s data, or suggest a next step.\n';
+    }
+  } catch (coopErr) {
+    console.error('[BRIEF] Co-operation context fetch error:', coopErr.message);
+  }
 
   const claudeRes = await axios.post(
     'https://api.anthropic.com/v1/messages',
@@ -109,6 +155,8 @@ Examples of good framing:
 - "Your sleep debt is currently [exact value from summary]. Adding 30-60 minutes to tonight's sleep window could help close it."
 
 Format: clean HTML using p, strong, ul, li only. No headings. Keep under 250 words. Be warm, be specific, be the specialist who finally connects the dots for them — but always with epistemic humility. You're observing patterns in their data, not making clinical pronouncements.
+
+${cooperationContext}
 
 DATA SUMMARY (pre-computed ground truth — use these values exactly):
 ${summaryMarkdown}`
@@ -180,7 +228,7 @@ export default async function handler(req, res) {
           const { data: fl } = await supabase.from('food_logs').select().eq('user_id', tokenRow.user_id).gte('logged_at', ydayLocal + 'T00:00:00').order('logged_at', { ascending: true });
           userFoodLogs = fl || [];
         } catch(e) {}
-        const { insight, firstName, latestRecovery, latestHRV, latestRHR, inputPayload } = await generateInsight(whoopData, profile, userFoodLogs, userTZ);
+        const { insight, firstName, latestRecovery, latestHRV, latestRHR, inputPayload } = await generateInsight(whoopData, profile, userFoodLogs, userTZ, tokenRow.user_id);
 
         // Log to ai_outputs for quality evaluation
         let aiOutputId = null;
