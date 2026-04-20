@@ -73,7 +73,7 @@ YOUR INVESTIGATION PROCESS:
 5. Check past patterns — has this happened before? What was the cause then?
 6. When you have enough evidence (usually 3-5 tool calls), form your conclusion.
 7. Decide how to communicate: WhatsApp for timely actionable findings, email for longer detailed explanations.
-8. Store any new patterns you discover for future investigations.
+8. Store any new patterns you discover using the store_pattern tool. Use it whenever you find a correlation supported by at least 2 data points. This is how you build memory — future investigations and morning briefs will reference your stored patterns.
 
 CRITICAL RULES:
 1. CORRELATIONAL LANGUAGE ONLY. You are observing patterns in n=1 data. Say "was followed by", "coincided with", "tends to be associated with". NEVER say "caused", "directly leads to", "because of".

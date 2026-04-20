@@ -121,6 +121,19 @@ export const TOOL_SCHEMAS = [
       },
       required: ['subject', 'body']
     }
+  },
+  {
+    name: 'store_pattern',
+    description: 'Store a pattern you discovered during this investigation. The pattern will be remembered for future investigations and shared with the morning brief agent. Only store patterns you have evidence for (at least 2 data points).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        pattern_type: { type: 'string', description: 'Category: food_recovery_correlation, sleep_pattern, meal_timing, exercise_impact, symptom_trigger, restriction_cycle' },
+        description: { type: 'string', description: 'Clear description of the pattern observed (e.g., "Late meals after 9 PM correlate with 20%+ recovery drops the following day")' },
+        confidence: { type: 'number', description: 'Confidence level 0.0 to 1.0 based on evidence strength (0.3=weak, 0.5=moderate, 0.7=strong, 0.9=very strong)' }
+      },
+      required: ['pattern_type', 'description', 'confidence']
+    }
   }
 ];
 
@@ -630,6 +643,57 @@ async function executeSendEmail(userId, input, investigationId) {
 // Tool executor — routes Claude's tool calls to the right function
 // =====================================================================
 
+async function executeStorePattern(userId, input, investigationId) {
+  const { pattern_type, description, confidence } = input;
+  if (!pattern_type || !description) return { error: 'pattern_type and description required' };
+  const conf = Math.min(Math.max(confidence || 0.5, 0), 1);
+
+  // Check if this pattern type already exists for this user
+  const { data: existing } = await supabase
+    .from('agent_learnings')
+    .select('id, evidence_count, confidence, investigation_ids')
+    .eq('user_id', userId)
+    .eq('pattern_type', pattern_type)
+    .eq('status', 'active')
+    .single();
+
+  if (existing) {
+    const newCount = (existing.evidence_count || 1) + 1;
+    const newConf = Math.min(0.95, conf * 0.4 + (existing.confidence || 0.5) * 0.6);
+    const ids = existing.investigation_ids || [];
+    if (investigationId) ids.push(investigationId);
+    await supabase.from('agent_learnings').update({
+      pattern_description: description,
+      evidence_count: newCount,
+      confidence: newConf,
+      last_confirmed_at: new Date().toISOString(),
+      investigation_ids: ids,
+    }).eq('id', existing.id);
+
+    await postAgentMessage('health_investigator', userId, 'pattern_discovered', {
+      pattern_type, description, confidence: newConf, investigation_id: investigationId,
+    });
+
+    return { stored: true, action: 'updated', evidence_count: newCount, confidence: newConf };
+  }
+
+  const { data: inserted } = await supabase.from('agent_learnings').insert({
+    user_id: userId,
+    pattern_type,
+    pattern_description: description,
+    confidence: conf,
+    evidence_count: 1,
+    source_agent: 'health_investigator',
+    investigation_ids: investigationId ? [investigationId] : [],
+  }).select('id').single();
+
+  await postAgentMessage('health_investigator', userId, 'pattern_discovered', {
+    pattern_type, description, confidence: conf, investigation_id: investigationId,
+  });
+
+  return { stored: true, action: 'created', id: inserted?.id };
+}
+
 export async function executeTool(toolName, userId, input, investigationId, options = {}) {
   const bypassCooldown = options.bypassCooldown || false;
   switch (toolName) {
@@ -651,6 +715,8 @@ export async function executeTool(toolName, userId, input, investigationId, opti
       return await executeSendWhatsapp(userId, input, investigationId, bypassCooldown);
     case 'send_email':
       return await executeSendEmail(userId, input, investigationId);
+    case 'store_pattern':
+      return await executeStorePattern(userId, input, investigationId);
     default:
       return { error: 'Unknown tool: ' + toolName };
   }
