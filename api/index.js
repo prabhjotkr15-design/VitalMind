@@ -46,6 +46,8 @@ app.get('/', (req, res) => {
 });
 
 app.get('/auth', (req, res) => res.send(getPage('auth.html')));
+app.get('/privacy', (req, res) => res.send(getPage('privacy.html')));
+app.get('/terms', (req, res) => res.send(getPage('terms.html')));
 
 app.post('/api/auth/signup', async (req, res) => {
   const rlId = getClientId(req);
