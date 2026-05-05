@@ -127,7 +127,7 @@ ${JSON.stringify(whoopData, null, 2)}`;
         const insight = claudeRes.data.content[0].text;
 
         await resend.emails.send({
-          from: 'VitalMind <onboarding@resend.dev>',
+          from: 'VitalMind AI <hello@vitalmindai.community>',
           to: [user.email],
           subject: firstName + ', your week in one story',
           html: '<div style="font-family:Helvetica Neue,Arial,sans-serif;max-width:520px;margin:0 auto;padding:40px 24px;background:#0c0a0b;color:#f0ece8"><div style="font-size:22px;color:#e09070;margin-bottom:8px;font-weight:600">VitalMind</div><div style="font-size:13px;color:rgba(240,236,232,0.3);margin-bottom:32px">Your weekly story</div><div style="background:#141112;border:1px solid rgba(255,235,225,0.06);border-radius:12px;padding:28px;margin-bottom:28px;font-size:15px;line-height:1.8;color:rgba(240,236,232,0.75)">' + insight + '</div><div style="text-align:center;margin-top:32px"><a href="https://vitalmindai.community/dashboard" style="display:inline-block;padding:14px 32px;background:#e09070;color:#0c0a0b;text-decoration:none;border-radius:100px;font-weight:600;font-size:14px">View your dashboard</a></div><p style="font-size:12px;color:rgba(240,236,232,0.15);text-align:center;margin-top:40px">VitalMind AI — weekly intelligence</p></div>'

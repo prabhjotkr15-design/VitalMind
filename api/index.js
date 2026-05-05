@@ -386,7 +386,7 @@ app.post('/api/auth/request-reset', async (req, res) => {
     const { Resend } = await import('resend');
     const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({
-      from: 'VitalMind <onboarding@resend.dev>',
+      from: 'VitalMind AI <hello@vitalmindai.community>',
       to: [email],
       subject: 'Reset your VitalMind password',
       html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:40px 20px"><h2 style="color:#e09070">Reset your password</h2><p style="color:#666;line-height:1.6;margin-bottom:24px">Click below to reset your VitalMind password. Link expires in 1 hour.</p><a href="' + resetUrl + '" style="display:inline-block;padding:14px 32px;background:#e09070;color:#fff;text-decoration:none;border-radius:8px;font-weight:500">Reset password</a><p style="color:#999;font-size:13px;margin-top:32px">If you did not request this, ignore this email.</p></div>'

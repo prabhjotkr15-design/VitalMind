@@ -618,7 +618,7 @@ async function executeSendEmail(userId, input, investigationId) {
     const { Resend } = await import('resend');
     const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({
-      from: 'VitalMind <onboarding@resend.dev>',
+      from: 'VitalMind AI <hello@vitalmindai.community>',
       to: user.email,
       subject: '🔍 ' + subject,
       html: body,
