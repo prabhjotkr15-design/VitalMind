@@ -643,6 +643,48 @@ app.post('/api/symptom-prefs', async (req, res) => {
 
 
 
+
+app.post('/api/weekly-review', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader !== 'Bearer ' + process.env.CRON_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  try {
+    const { investigate } = await import('./health-investigator.js');
+    const { createClient: cc } = await import('@supabase/supabase-js');
+    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    const { data: allTokens } = await sb.from('whoop_tokens').select('user_id');
+    if (!allTokens || allTokens.length === 0) {
+      return res.json({ message: 'No users to process' });
+    }
+    let triggered = 0;
+    let skipped = 0;
+    for (const tokenRow of allTokens) {
+      try {
+        // Fire investigation as non-blocking (don't wait for each to complete)
+        investigate({
+          userId: tokenRow.user_id,
+          eventId: null,
+          eventType: 'weekly_review',
+          eventData: {
+            description: 'Weekly health review — analyze 7-day patterns across recovery, sleep, food, symptoms, and workouts. Provide a comprehensive summary and store any new patterns discovered.',
+            review_type: 'weekly',
+          },
+          severity: 'low',
+        }).catch(err => {
+          console.error('[WEEKLY-REVIEW] Failed for user:', tokenRow.user_id, err.message);
+        });
+        triggered++;
+      } catch (e) {
+        skipped++;
+      }
+    }
+    res.json({ message: 'Weekly review triggered', triggered, skipped, total_users: allTokens.length });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/investigate', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (authHeader !== 'Bearer ' + process.env.CRON_SECRET) {
