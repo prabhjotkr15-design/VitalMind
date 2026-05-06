@@ -644,6 +644,21 @@ app.post('/api/symptom-prefs', async (req, res) => {
 
 
 
+app.get('/api/weekly-review-users', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader !== 'Bearer ' + process.env.CRON_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  try {
+    const { createClient: cc } = await import('@supabase/supabase-js');
+    const sb = cc(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    const { data: tokens } = await sb.from('whoop_tokens').select('user_id');
+    res.json({ users: (tokens || []).map(t => t.user_id) });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/weekly-review', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (authHeader !== 'Bearer ' + process.env.CRON_SECRET) {
