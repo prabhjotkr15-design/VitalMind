@@ -685,6 +685,8 @@ app.post('/api/weekly-review', async (req, res) => {
         skipped++;
       }
     }
+    // Wait for fetch calls to be dispatched before responding
+    await new Promise(r => setTimeout(r, 3000));
     res.json({ message: 'Weekly review triggered', triggered, skipped, total_users: allTokens.length });
   } catch(e) {
     res.status(500).json({ error: e.message });
