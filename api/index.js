@@ -658,10 +658,13 @@ app.post('/api/weekly-review', async (req, res) => {
     }
     let triggered = 0;
     let skipped = 0;
-    for (const tokenRow of allTokens) {
+    for (let i = 0; i < allTokens.length; i++) {
+      const tokenRow = allTokens[i];
       try {
-        // Fire as separate Vercel function (survives after this response ends)
-        fetch('https://vitalmindai.community/api/investigate', {
+        // Stagger calls by 30 seconds to avoid rate limiting
+        const delay = i * 30000;
+        setTimeout(() => {
+          fetch('https://vitalmindai.community/api/investigate', {
           method: 'POST',
           headers: {
             'Authorization': 'Bearer ' + process.env.CRON_SECRET,
@@ -677,9 +680,10 @@ app.post('/api/weekly-review', async (req, res) => {
             severity: 'low',
           }),
           keepalive: true,
-        }).catch(err => {
-          console.error('[WEEKLY-REVIEW] Failed for user:', tokenRow.user_id, err.message);
-        });
+          }).catch(err => {
+            console.error('[WEEKLY-REVIEW] Failed for user:', tokenRow.user_id, err.message);
+          });
+        }, delay);
         triggered++;
       } catch (e) {
         skipped++;

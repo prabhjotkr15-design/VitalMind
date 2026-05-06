@@ -166,30 +166,44 @@ export async function investigate({ userId, eventId, eventType, eventData, sever
 
       // Call Claude with tool use
       let response;
-      try {
-        response = await axios.post(
-          'https://api.anthropic.com/v1/messages',
-          {
-            model: MODEL,
-            max_tokens: 1024,
-            system: systemPrompt,
-            tools: TOOL_SCHEMAS,
-            messages,
-          },
-          {
-            headers: {
-              'x-api-key': process.env.ANTHROPIC_API_KEY,
-              'anthropic-version': '2023-06-01',
-              'content-type': 'application/json',
+      // Claude API call with retry on rate limit (429)
+      let retries = 0;
+      const maxRetries = 3;
+      while (retries <= maxRetries) {
+        try {
+          response = await axios.post(
+            'https://api.anthropic.com/v1/messages',
+            {
+              model: MODEL,
+              max_tokens: 1024,
+              system: systemPrompt,
+              tools: TOOL_SCHEMAS,
+              messages,
             },
-            timeout: 30000,
+            {
+              headers: {
+                'x-api-key': process.env.ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json',
+              },
+              timeout: 30000,
+            }
+          );
+          break; // success
+        } catch (apiError) {
+          if (apiError.response?.status === 429 && retries < maxRetries) {
+            const waitMs = (retries + 1) * 10000; // 10s, 20s, 30s backoff
+            console.log(`[INVESTIGATOR] Rate limited (429). Retry ${retries + 1}/${maxRetries} after ${waitMs / 1000}s`);
+            await new Promise(r => setTimeout(r, waitMs));
+            retries++;
+            continue;
           }
-        );
-      } catch (apiError) {
-        console.error(`[INVESTIGATOR] Claude API error:`, apiError.response?.status, apiError.message);
-        await logTrace(investigationId, userId, ++stepNumber, 'error', null, null, null, 'Claude API error: ' + (apiError.response?.status || apiError.message), 0, 0);
-        break;
+          console.error(`[INVESTIGATOR] Claude API error:`, apiError.response?.status, apiError.message);
+          await logTrace(investigationId, userId, ++stepNumber, 'error', null, null, null, 'Claude API error: ' + (apiError.response?.status || apiError.message), 0, 0);
+          break;
+        }
       }
+      if (!response) break;
 
       const usage = response.data.usage || {};
       const stepCost = computeCost(usage.input_tokens || 0, usage.output_tokens || 0);
