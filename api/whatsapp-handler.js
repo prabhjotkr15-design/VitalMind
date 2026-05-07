@@ -161,6 +161,27 @@ async function processNewMeal(user, body, numMedia, req, profile, conditionsText
   }
 
   await supabase.from('pending_meals').delete().eq('user_id', user.id);
+
+  // --- PHOTO PATH: Analyze immediately with Claude Vision ---
+  if (inputType === 'photo' && imageBase64) {
+    try {
+      const { analyzeFood } = await import('./food-analyzer.js');
+      const result = await analyzeFood(user.id, 'photo', originalInput, imageBase64, imageMime, profile);
+      const flags = result.flags && result.flags.length > 0 ? '\n\n⚠️ ' + result.flags.join('\n⚠️ ') : '';
+      const message = '✅ Logged: ' + result.description +
+        '\n\n🔢 ' + result.total.calories + ' cal | P ' + result.total.protein + 'g | C ' + result.total.carbs + 'g | F ' + result.total.fat + 'g' +
+        flags +
+        (result.insight ? '\n\n💡 ' + result.insight : '');
+      return reply(res, message);
+    } catch (err) {
+      if (err.code === 'NOT_FOOD') {
+        return reply(res, "I couldn't recognize any food in your photo. Try a clearer photo or describe what you ate!");
+      }
+      console.error('[PHOTO] Analysis failed:', err.message);
+    }
+  }
+
+  // --- TEXT PATH (or photo fallback): Store and ask clarification ---
   await supabase.from('pending_meals').insert({
     user_id: user.id,
     original_input: originalInput,
@@ -168,7 +189,6 @@ async function processNewMeal(user, body, numMedia, req, profile, conditionsText
     image_base64: imageBase64,
     image_mime: imageMime
   });
-
   const questions = await askClarification(originalInput, conditionsText, dietText);
   return reply(res, 'Got it — ' + originalInput + '\n\nQuick questions for accuracy:\n' + questions + '\n\nReply with your answers and I will log it!');
 }
