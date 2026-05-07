@@ -677,6 +677,34 @@
       } catch(e) {}
     }
 
+    // Auto-detect timezone from device — handles travel
+    async function autoDetectTimezone() {
+      try {
+        var detectedTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (!detectedTZ) return;
+        var res = await fetch('/api/timezone');
+        var data = await res.json();
+        if (data && data.timezone && data.timezone !== detectedTZ) {
+          console.log('Timezone changed: ' + data.timezone + ' → ' + detectedTZ);
+          await updateTimezone(detectedTZ);
+          // Update the dropdown to show new timezone
+          var sel = document.getElementById('tzSelect');
+          var found = false;
+          for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value === detectedTZ) { sel.selectedIndex = i; found = true; break; }
+          }
+          if (!found) {
+            var opt = document.createElement('option');
+            opt.value = detectedTZ;
+            opt.textContent = detectedTZ;
+            opt.selected = true;
+            sel.appendChild(opt);
+          }
+        }
+      } catch(e) { console.error('Auto-detect TZ error:', e); }
+    }
+    autoDetectTimezone();
+
     async function updateTimezone(tz) {
       var savedEl = document.getElementById('tzSaved');
       try {
