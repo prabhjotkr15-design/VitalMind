@@ -78,7 +78,25 @@ export const TOOL_SCHEMAS = [
     }
   },
   {
-    name: 'check_past_patterns',
+    name: 'fetch_strain',
+    description: 'Fetch daily strain/cycle data from WHOOP. Shows daily strain score (0-21 scale), kilojoules burned, and average/max heart rate. Use this to understand overall daily activity level — includes all movement, not just logged workouts.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        days: { type: 'integer', description: 'Number of days to look back (default 7, max 14)' },
+      },
+    },
+  },
+  {
+    name: 'fetch_body',
+    description: 'Fetch latest body measurements from WHOOP — height, weight, and max heart rate.',
+    input_schema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+        name: 'check_past_patterns',
     description: 'Retrieve known patterns the system has previously discovered about this user (e.g., "late meals correlate with recovery drops"). These are confirmed observations from past investigations.',
     input_schema: {
       type: 'object',
@@ -694,6 +712,67 @@ async function executeStorePattern(userId, input, investigationId) {
   return { stored: true, action: 'created', id: inserted?.id };
 }
 
+async function executeFetchStrain(userId, input) {
+  const days = Math.min(input.days || 7, 14);
+  const tz = await getUserTimezone(userId);
+  const { data: tokenRow } = await supabase
+    .from('whoop_tokens').select('access_token').eq('user_id', userId).single();
+  if (!tokenRow) return { error: 'No WHOOP connected', data: [] };
+  let accessToken;
+  try { const { decrypt } = await import('./encrypt.js'); accessToken = decrypt(tokenRow.access_token); }
+  catch (e) { accessToken = tokenRow.access_token; }
+  try {
+    const axios = (await import('axios')).default;
+    const headers = { Authorization: 'Bearer ' + accessToken };
+    const res = await axios.get('https://api.prod.whoop.com/developer/v2/cycle?limit=' + days, { headers });
+    const records = res.data?.records || [];
+    if (records.length === 0) {
+      return { data: [], count: 0, note: 'No cycle data found in last ' + days + ' days' };
+    }
+    return {
+      data: records.map(c => {
+        const startParts = utcToTZParts(c.start, tz);
+        return {
+          date: startParts?.date || 'unknown',
+          strain: c.score?.strain?.toFixed(1) || 'N/A',
+          kilojoules: c.score?.kilojoule ? Math.round(c.score.kilojoule) : 'N/A',
+          avg_heart_rate: c.score?.average_heart_rate ? Math.round(c.score.average_heart_rate) : 'N/A',
+          max_heart_rate: c.score?.max_heart_rate ? Math.round(c.score.max_heart_rate) : 'N/A',
+        };
+      }),
+      count: records.length,
+    };
+  } catch (e) {
+    return { error: 'WHOOP API error: ' + e.message, data: [] };
+  }
+}
+
+async function executeFetchBody(userId) {
+  const { data: tokenRow } = await supabase
+    .from('whoop_tokens').select('access_token').eq('user_id', userId).single();
+  if (!tokenRow) return { error: 'No WHOOP connected' };
+  let accessToken;
+  try { const { decrypt } = await import('./encrypt.js'); accessToken = decrypt(tokenRow.access_token); }
+  catch (e) { accessToken = tokenRow.access_token; }
+  try {
+    const axios = (await import('axios')).default;
+    const headers = { Authorization: 'Bearer ' + accessToken };
+    const res = await axios.get('https://api.prod.whoop.com/developer/v2/body?limit=1', { headers });
+    const records = res.data?.records || [];
+    if (records.length === 0) {
+      return { note: 'No body measurement data available' };
+    }
+    const b = records[0];
+    return {
+      height_cm: b.height_meter ? (b.height_meter * 100).toFixed(1) : null,
+      weight_kg: b.weight_kilogram ? b.weight_kilogram.toFixed(1) : null,
+      max_heart_rate: b.max_heart_rate || null,
+    };
+  } catch (e) {
+    return { error: 'WHOOP API error: ' + e.message };
+  }
+}
+
 export async function executeTool(toolName, userId, input, investigationId, options = {}) {
   const bypassCooldown = options.bypassCooldown || false;
   switch (toolName) {
@@ -707,6 +786,10 @@ export async function executeTool(toolName, userId, input, investigationId, opti
       return await executeFetchSymptoms(userId, input);
     case 'fetch_workouts':
       return await executeFetchWorkouts(userId, input);
+    case 'fetch_strain':
+      return await executeFetchStrain(userId, input);
+    case 'fetch_body':
+      return await executeFetchBody(userId, input);
     case 'check_past_patterns':
       return await executeCheckPastPatterns(userId, input);
     case 'check_past_investigations':

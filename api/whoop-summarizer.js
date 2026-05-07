@@ -256,6 +256,43 @@ function summarizeWorkouts(workoutArr, timezone, referenceDate) {
 // Food summarizer
 // =====================================================================
 
+function summarizeCycle(cycleArr, timezone, referenceDate) {
+  if (!cycleArr || cycleArr.length === 0) return '';
+  let out = '## Daily Strain (Activity Level)
+
+';
+  for (const c of cycleArr) {
+    if (!c.score) continue;
+    const startParts = utcToTZParts(c.start, timezone);
+    const strain = c.score.strain ? c.score.strain.toFixed(1) : 'N/A';
+    const kj = c.score.kilojoule ? Math.round(c.score.kilojoule) : 'N/A';
+    const avgHR = c.score.average_heart_rate ? Math.round(c.score.average_heart_rate) : 'N/A';
+    const maxHR = c.score.max_heart_rate ? Math.round(c.score.max_heart_rate) : 'N/A';
+    out += '- ' + (startParts?.date || 'unknown') + ': Strain ' + strain + '/21, ' + kj + ' kJ burned, avg HR ' + avgHR + ' bpm, max HR ' + maxHR + ' bpm
+';
+  }
+  out += '
+';
+  return out;
+}
+
+function summarizeBody(bodyData) {
+  if (!bodyData || !bodyData.records || bodyData.records.length === 0) return '';
+  const b = bodyData.records[0];
+  let out = '## Body Measurements
+
+';
+  if (b.height_meter) out += '- Height: ' + (b.height_meter * 100).toFixed(1) + ' cm
+';
+  if (b.weight_kilogram) out += '- Weight: ' + b.weight_kilogram.toFixed(1) + ' kg
+';
+  if (b.max_heart_rate) out += '- Max heart rate: ' + b.max_heart_rate + ' bpm
+';
+  out += '
+';
+  return out;
+}
+
 function summarizeFood(foodArr, timezone, referenceDate) {
   if (!foodArr || foodArr.length === 0) {
     return '## Food logs\nNo food logged.\n\n';
@@ -342,6 +379,8 @@ export function summarizeForLLM(inputData, options) {
   out += summarizeRecovery(whoop.recovery, whoop.sleep, timezone, referenceDate);
   out += summarizeSleep(whoop.sleep, timezone, referenceDate);
   out += summarizeWorkouts(whoop.workout, timezone, referenceDate);
+  out += summarizeCycle(whoop.cycle, timezone, referenceDate);
+  out += summarizeBody(whoop.body);
   out += summarizeFood(foodLogs, timezone, referenceDate);
   out += '---\n';
   out += '**END OF DATA SUMMARY**\n';

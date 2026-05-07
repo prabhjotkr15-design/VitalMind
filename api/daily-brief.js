@@ -12,17 +12,21 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function fetchWhoopData(accessToken) {
   const headers = { Authorization: 'Bearer ' + accessToken };
-  const [profileRes, recoveryRes, sleepRes, workoutRes] = await Promise.allSettled([
+  const [profileRes, recoveryRes, sleepRes, workoutRes, cycleRes, bodyRes] = await Promise.allSettled([
     axios.get('https://api.prod.whoop.com/developer/v1/user/profile/basic', { headers }),
     axios.get('https://api.prod.whoop.com/developer/v2/recovery?limit=7', { headers }),
     axios.get('https://api.prod.whoop.com/developer/v2/activity/sleep?limit=7', { headers }),
     axios.get('https://api.prod.whoop.com/developer/v2/activity/workout?limit=7', { headers }),
+    axios.get('https://api.prod.whoop.com/developer/v2/cycle?limit=7', { headers }),
+    axios.get('https://api.prod.whoop.com/developer/v2/body?limit=1', { headers }),
   ]);
   return {
     profile: profileRes.status === 'fulfilled' ? profileRes.value.data : null,
     recovery: recoveryRes.status === 'fulfilled' ? recoveryRes.value.data.records : [],
     sleep: sleepRes.status === 'fulfilled' ? sleepRes.value.data.records : [],
     workout: workoutRes.status === 'fulfilled' ? workoutRes.value.data.records : [],
+    cycle: cycleRes.status === 'fulfilled' ? cycleRes.value.data.records : [],
+    body: bodyRes.status === 'fulfilled' ? bodyRes.value.data : null,
   };
 }
 
