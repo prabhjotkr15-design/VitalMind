@@ -99,10 +99,19 @@ async function processSymptomReply(user, body, res) {
 async function processFoodClarificationReply(user, pending, body, profile, res) {
   const combined = pending.original_input + '. Additional details: ' + body.trim();
   await supabase.from('pending_meals').delete().eq('user_id', user.id);
+  // If this is a photo refinement, delete the previous food log entry
+  if (pending.input_type === 'photo_refinement') {
+    const { data: lastLog } = await supabase.from('food_logs')
+      .select('id').eq('user_id', user.id)
+      .order('created_at', { ascending: false }).limit(1).single();
+    if (lastLog) {
+      await supabase.from('food_logs').delete().eq('id', lastLog.id);
+    }
+  }
 
   let result;
   try {
-    if (pending.input_type === 'photo' && pending.image_base64) {
+    if ((pending.input_type === 'photo' || pending.input_type === 'photo_refinement') && pending.image_base64) {
       result = await analyzeFood(user.id, 'photo', combined, pending.image_base64, pending.image_mime, profile);
     } else {
       result = await analyzeFood(user.id, 'text', combined, null, null, profile);
@@ -115,7 +124,7 @@ async function processFoodClarificationReply(user, pending, body, profile, res) 
   }
 
   const flags = result.flags && result.flags.length > 0 ? '\n\n⚠️ ' + result.flags.join('\n⚠️ ') : '';
-  const message = '✅ Logged: ' + result.description +
+  const message = '✅ ' + (pending.input_type === 'photo_refinement' ? 'Updated' : 'Logged') + ': ' + result.description +
     '\n\n🔢 ' + result.total.calories + ' cal | P ' + result.total.protein + 'g | C ' + result.total.carbs + 'g | F ' + result.total.fat + 'g' +
     flags +
     (result.insight ? '\n\n💡 ' + result.insight : '');
@@ -172,7 +181,15 @@ async function processNewMeal(user, body, numMedia, req, profile, conditionsText
         '\n\n🔢 ' + result.total.calories + ' cal | P ' + result.total.protein + 'g | C ' + result.total.carbs + 'g | F ' + result.total.fat + 'g' +
         flags +
         (result.insight ? '\n\n💡 ' + result.insight : '');
-      return reply(res, message);
+      // Store in pending for optional refinement
+      await supabase.from('pending_meals').insert({
+        user_id: user.id,
+        original_input: originalInput || 'Photo of meal',
+        input_type: 'photo_refinement',
+        image_base64: imageBase64,
+        image_mime: imageMime
+      });
+      return reply(res, message + '\n\nWant to refine? Reply with details like ingredients, portion size, or how it was made.');
     } catch (err) {
       if (err.code === 'NOT_FOOD') {
         return reply(res, "I couldn't recognize any food in your photo. Try a clearer photo or describe what you ate!");
