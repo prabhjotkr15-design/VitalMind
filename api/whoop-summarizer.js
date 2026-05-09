@@ -258,9 +258,7 @@ function summarizeWorkouts(workoutArr, timezone, referenceDate) {
 
 function summarizeCycle(cycleArr, timezone, referenceDate) {
   if (!cycleArr || cycleArr.length === 0) return '';
-  let out = '## Daily Strain (Activity Level)
-
-';
+  let out = '## Daily Strain (Activity Level)\n\n';
   for (const c of cycleArr) {
     if (!c.score) continue;
     const startParts = utcToTZParts(c.start, timezone);
@@ -268,28 +266,20 @@ function summarizeCycle(cycleArr, timezone, referenceDate) {
     const kj = c.score.kilojoule ? Math.round(c.score.kilojoule) : 'N/A';
     const avgHR = c.score.average_heart_rate ? Math.round(c.score.average_heart_rate) : 'N/A';
     const maxHR = c.score.max_heart_rate ? Math.round(c.score.max_heart_rate) : 'N/A';
-    out += '- ' + (startParts?.date || 'unknown') + ': Strain ' + strain + '/21, ' + kj + ' kJ burned, avg HR ' + avgHR + ' bpm, max HR ' + maxHR + ' bpm
-';
+    out += '- ' + (startParts?.date || 'unknown') + ': Strain ' + strain + '/21, ' + kj + ' kJ burned, avg HR ' + avgHR + ' bpm, max HR ' + maxHR + ' bpm\n';
   }
-  out += '
-';
+  out += '\n';
   return out;
 }
 
 function summarizeBody(bodyData) {
   if (!bodyData || !bodyData.records || bodyData.records.length === 0) return '';
   const b = bodyData.records[0];
-  let out = '## Body Measurements
-
-';
-  if (b.height_meter) out += '- Height: ' + (b.height_meter * 100).toFixed(1) + ' cm
-';
-  if (b.weight_kilogram) out += '- Weight: ' + b.weight_kilogram.toFixed(1) + ' kg
-';
-  if (b.max_heart_rate) out += '- Max heart rate: ' + b.max_heart_rate + ' bpm
-';
-  out += '
-';
+  let out = '## Body Measurements\n\n';
+  if (b.height_meter) out += '- Height: ' + (b.height_meter * 100).toFixed(1) + ' cm\n';
+  if (b.weight_kilogram) out += '- Weight: ' + b.weight_kilogram.toFixed(1) + ' kg\n';
+  if (b.max_heart_rate) out += '- Max heart rate: ' + b.max_heart_rate + ' bpm\n';
+  out += '\n';
   return out;
 }
 
