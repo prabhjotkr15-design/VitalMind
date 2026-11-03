@@ -1,3 +1,4 @@
+import { MODELS } from './models.js';
 import twilio from 'twilio';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
@@ -51,7 +52,7 @@ async function askClarification(foodDescription, conditions, diet) {
   const res = await axios.post(
     'https://api.anthropic.com/v1/messages',
     {
-      model: 'claude-sonnet-4-20250514',
+      model: MODELS.fast,
       max_tokens: 300,
       temperature: 0,
       messages: [{
@@ -283,7 +284,7 @@ export async function handleIncoming(req, res) {
       try {
         const axiosClassify = (await import('axios')).default;
         const classifyRes = await axiosClassify.post('https://api.anthropic.com/v1/messages', {
-          model: 'claude-sonnet-4-20250514',
+          model: MODELS.fast,
           max_tokens: 10,
           temperature: 0,
           messages: [{ role: 'user', content: 'You are routing a WhatsApp message in a health app. Classify as:\nA - New health question (about their recovery, sleep, symptoms, body, health, what to eat for health reasons, what to do)\nB - Food description, food logging, or answering a food-related question (portion size, preparation, ingredients)\nC - Follow-up or response to a recent health finding (asking for more detail, saying thanks, reacting to advice)\n\n' + classifyContext + '\nMessage: "' + userMessage.replace(/"/g, '\\"') + '"\n\nReply with ONLY the letter A, B, or C.' }]
@@ -307,7 +308,7 @@ export async function handleIncoming(req, res) {
             const axiosRewrite = (await import('axios')).default;
             const findingText = recentFinding.payload.message || JSON.stringify(recentFinding.payload);
             const rewriteRes = await axiosRewrite.post('https://api.anthropic.com/v1/messages', {
-              model: 'claude-sonnet-4-20250514',
+              model: MODELS.fast,
               max_tokens: 400,
               temperature: 0,
               messages: [{ role: 'user', content: 'You are a warm health companion for someone with chronic conditions. The user received this health finding:\n\n"' + findingText.replace(/"/g, '\\"') + '"\n\nThey replied: "' + userMessage.replace(/"/g, '\\"') + '"\n\nWrite a warm, helpful response under 800 characters. Use correlational language only. Reference specific data points from the finding. No diagnoses. No medication recommendations. If they said thanks, acknowledge warmly and offer to keep watching their data.' }]

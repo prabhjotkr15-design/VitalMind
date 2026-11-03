@@ -1,3 +1,4 @@
+import { MODELS } from './models.js';
 import axios from 'axios';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
@@ -71,7 +72,7 @@ export default async function handler(req, res) {
         const claudeRes = await axios.post(
           'https://api.anthropic.com/v1/messages',
           {
-            model: 'claude-sonnet-4-20250514',
+            model: MODELS.fast,
             max_tokens: 600,
             messages: [{
               role: 'user',

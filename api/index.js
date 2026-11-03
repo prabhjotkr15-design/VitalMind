@@ -1,3 +1,4 @@
+import { MODELS } from './models.js';
 import express from 'express';
 import axios from 'axios';
 import multer from 'multer';
@@ -246,7 +247,7 @@ app.get('/insights-stored', async (req, res) => {
     const claudeRes = await axios.post(
       'https://api.anthropic.com/v1/messages',
       {
-        model: 'claude-sonnet-4-20250514',
+        model: MODELS.fast,
         max_tokens: 1200,
         messages: [{
           role: 'user',
@@ -301,7 +302,7 @@ app.get('/insights', async (req, res) => {
     const claudeRes = await axios.post(
       'https://api.anthropic.com/v1/messages',
       {
-        model: 'claude-opus-4-5',
+        model: MODELS.deep,
         max_tokens: 1200,
         messages: [{
           role: 'user',
@@ -354,7 +355,7 @@ app.post('/analyze-workout', upload.single('file'), async (req, res) => {
 
     const claudeRes = await axios.post(
       'https://api.anthropic.com/v1/messages',
-      { model: 'claude-opus-4-5', max_tokens: 1000, messages },
+      { model: MODELS.deep, max_tokens: 1000, messages },
       { headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' } }
     );
 

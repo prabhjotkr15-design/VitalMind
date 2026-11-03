@@ -14,6 +14,7 @@
 // Model: Sonnet 4 (cost-efficient for 5-15 tool calls per investigation)
 // Safety: max 15 steps, $0.50 cost, 5 minute timeout, medical rubric enforced
 
+import { MODELS } from './models.js';
 import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
 import { TOOL_SCHEMAS, executeTool, postAgentMessage, getPendingMessages } from './agent-tools.js';
@@ -28,7 +29,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 const MAX_STEPS = 20;
 const MAX_COST_USD = 0.50;
 const MAX_TIME_MS = 5 * 60 * 1000; // 5 minutes
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = MODELS.fast;
 
 // Pricing per million tokens
 const PRICING = { input: 3.00, output: 15.00 };

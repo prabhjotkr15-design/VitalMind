@@ -1,3 +1,4 @@
+import { MODELS } from './models.js';
 import axios from 'axios';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
@@ -116,7 +117,7 @@ ${JSON.stringify(whoopData, null, 2)}`;
         const claudeRes = await axios.post(
           'https://api.anthropic.com/v1/messages',
           {
-            model: 'claude-opus-4-6',
+            model: MODELS.deep,
             max_tokens: 1000,
             temperature: 0,
             messages: [{ role: 'user', content: prompt }]

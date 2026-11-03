@@ -9,6 +9,7 @@
 // instead of raw JSON. This eliminates judge errors caused by misinterpreting
 // WHOOP API quirks (UTC vs PST, ms vs hours, etc).
 
+import { MODELS } from './models.js';
 import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
 import { readFileSync } from 'fs';
@@ -36,7 +37,7 @@ function loadMedicalRubric() {
 }
 
 const PRICING = {
-  'claude-sonnet-4-20250514': { input: 3.00, output: 15.00 },
+  [MODELS.fast]: { input: 3.00, output: 15.00 },
   'gpt-4o': { input: 2.50, output: 10.00 },
 };
 
@@ -129,7 +130,7 @@ function parseJudgeResponse(rawText) {
 }
 
 async function judgeWithSonnet(summaryMarkdown, paragraph, paragraphType, medicalRubric) {
-  const model = 'claude-sonnet-4-20250514';
+  const model = MODELS.fast;
   const prompt = buildJudgePrompt(summaryMarkdown, paragraph, paragraphType, medicalRubric);
   const response = await axios.post(
     'https://api.anthropic.com/v1/messages',
@@ -382,7 +383,7 @@ export async function judgeBrief({ aiOutputId, userId }) {
 
   const evalRunRecord = {
     ai_output_id: outputRow.id,
-    judge_models: ['claude-sonnet-4-20250514', 'gpt-4o'],
+    judge_models: [MODELS.fast, 'gpt-4o'],
     grounding_score_overall: overallGrounding,
     paragraph_verdicts: {
       mode,

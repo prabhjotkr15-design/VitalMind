@@ -1,3 +1,4 @@
+import { MODELS } from './models.js';
 import axios from 'axios';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
@@ -96,7 +97,7 @@ async function generateInsight(whoopData, userProfile, foodLogs, timezone, userI
   const claudeRes = await axios.post(
     'https://api.anthropic.com/v1/messages',
     {
-      model: 'claude-opus-4-6',
+      model: MODELS.deep,
       max_tokens: 800,
       messages: [{
         role: 'user',
@@ -240,7 +241,7 @@ export default async function handler(req, res) {
           const { data: logged } = await supabase.from("ai_outputs").insert({
             agent_name: "morning_brief",
             user_id: tokenRow.user_id,
-            model: "claude-opus-4-6",
+            model: MODELS.deep,
             input_data: inputPayload,
             output_text: insight
           }).select("id").single();
